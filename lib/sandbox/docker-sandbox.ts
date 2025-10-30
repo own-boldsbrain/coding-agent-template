@@ -52,14 +52,14 @@ export class DockerSandbox {
       await this.ensureImage()
 
       // Create and start container
-      const portMappings = (this.config.ports || [3000]).map(p => `-p ${p}:${p}`).join(' ')
-      
+      const portMappings = (this.config.ports || [3000]).map((p) => `-p ${p}:${p}`).join(' ')
+
       const { stdout } = await execAsync(
         `docker run -d ${portMappings} --name ${this.containerName} ` +
-        `--add-host=host.docker.internal:host-gateway ` +
-        `-e OLLAMA_HOST=http://host.docker.internal:11434 ` +
-        `-w /workspace ` +
-        `${this.imageName} tail -f /dev/null`
+          `--add-host=host.docker.internal:host-gateway ` +
+          `-e OLLAMA_HOST=http://host.docker.internal:11434 ` +
+          `-w /workspace ` +
+          `${this.imageName} tail -f /dev/null`,
       )
 
       this.containerId = stdout.trim()
@@ -74,7 +74,7 @@ export class DockerSandbox {
     } catch {
       // Image does not exist, build from inline Dockerfile
       console.log('Building Docker sandbox image...')
-      
+
       const dockerfile = `
 FROM node:22-slim
 
@@ -91,13 +91,13 @@ WORKDIR /workspace
 
 CMD ["/bin/bash"]
 `
-      
+
       // Create temp Dockerfile
       const tempDockerfile = `C:\\Users\\fjuni\\coding-agent-template\\Dockerfile.sandbox`
       require('fs').writeFileSync(tempDockerfile, dockerfile)
-      
+
       await execAsync(`docker build -t ${this.imageName} -f ${tempDockerfile} .`)
-      
+
       // Clean up temp file
       require('fs').unlinkSync(tempDockerfile)
     }
@@ -111,20 +111,17 @@ CMD ["/bin/bash"]
         }
 
         try {
-          const cmd = options.args && options.args.length > 0
-            ? `${options.command} ${options.args.join(' ')}`
-            : options.command
+          const cmd =
+            options.args && options.args.length > 0 ? `${options.command} ${options.args.join(' ')}` : options.command
 
-          const { stdout, stderr } = await execAsync(
-            `docker exec ${this.containerId} sh -c ${JSON.stringify(cmd)}`
-          )
+          const { stdout, stderr } = await execAsync(`docker exec ${this.containerId} sh -c ${JSON.stringify(cmd)}`)
 
           return {
             exitCode: 0,
             stdout: stdout,
             stderr: stderr,
             output: stdout,
-            success: true
+            success: true,
           }
         } catch (error: any) {
           return {
@@ -133,10 +130,10 @@ CMD ["/bin/bash"]
             stderr: error.stderr || '',
             output: error.stdout || '',
             success: false,
-            error: error.message
+            error: error.message,
           }
         }
-      }
+      },
     }
   }
 
@@ -145,7 +142,7 @@ CMD ["/bin/bash"]
     return {
       exitCode: result.exitCode,
       stdout: async () => result.stdout,
-      stderr: async () => result.stderr
+      stderr: async () => result.stderr,
     }
   }
 

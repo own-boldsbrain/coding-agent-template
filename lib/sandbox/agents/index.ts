@@ -140,7 +140,6 @@ export async function executeAgentInSandbox(
           sessionId,
         )
 
-      
       case 'qwen':
         return await executeQwenInSandbox(sandbox, instruction, logger, selectedModel, mcpServers)
 
@@ -166,4 +165,3 @@ export async function executeAgentInSandbox(
     process.env.GITHUB_TOKEN = originalEnv.GITHUB_TOKEN
   }
 }
-

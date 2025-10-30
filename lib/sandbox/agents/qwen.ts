@@ -6,13 +6,13 @@ export async function executeQwenInSandbox(
   instruction: string,
   logger: { info: (msg: string) => Promise<void>; error: (msg: string) => Promise<void> },
   selectedModel?: string,
-  mcpServers?: any
+  mcpServers?: any,
 ): Promise<AgentExecutionResult> {
   const ollamaHost = process.env.OLLAMA_HOST || 'http://host.docker.internal:11434'
   const model = selectedModel || 'qwen2.5-coder:32b'
-  
+
   await logger.info('Using Qwen model: ' + model)
-  
+
   const pythonScript = `import requests
 import json
 import sys
@@ -33,15 +33,15 @@ if response.status_code == 200:
 else:
     print(f"Error: {response.status_code}", file=sys.stderr)
     sys.exit(1)`
-  
+
   await sandbox.runCommand(`echo '${pythonScript}' > /tmp/qwen_ollama.py`)
-  
+
   const result = await sandbox.runCommand(`python3 /tmp/qwen_ollama.py "${instruction}"`)
-  
+
   return {
     success: result.exitCode === 0,
     changesDetected: (await result.stdout()).length > 0,
     agentResponse: await result.stdout(),
-    error: result.exitCode !== 0 ? await result.stderr() : undefined
+    error: result.exitCode !== 0 ? await result.stderr() : undefined,
   }
 }

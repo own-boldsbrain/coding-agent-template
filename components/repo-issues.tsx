@@ -456,5 +456,3 @@ export function RepoIssues({ owner, repo }: RepoIssuesProps) {
     </>
   )
 }
-
-

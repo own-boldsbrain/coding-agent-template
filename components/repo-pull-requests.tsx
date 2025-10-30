@@ -566,5 +566,3 @@ export function RepoPullRequests({ owner, repo }: RepoPullRequestsProps) {
     </>
   )
 }
-
-
