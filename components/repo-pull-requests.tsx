@@ -35,6 +35,8 @@ import Copilot from '@/components/logos/copilot'
 import Cursor from '@/components/logos/cursor'
 import Gemini from '@/components/logos/gemini'
 import OpenCode from '@/components/logos/opencode'
+import Qwen from '@/components/logos/qwen'
+import DeepSeek from '@/components/logos/deepseek'
 
 const CODING_AGENTS = [
   { value: 'claude', label: 'Claude', icon: Claude },
@@ -43,6 +45,8 @@ const CODING_AGENTS = [
   { value: 'cursor', label: 'Cursor', icon: Cursor },
   { value: 'gemini', label: 'Gemini', icon: Gemini },
   { value: 'opencode', label: 'opencode', icon: OpenCode },
+  { value: 'qwen', label: 'Qwen', icon: Qwen },
+  { value: 'deepseek', label: 'DeepSeek', icon: DeepSeek },
 ] as const
 
 const AGENT_MODELS = {
@@ -562,3 +566,5 @@ export function RepoPullRequests({ owner, repo }: RepoPullRequestsProps) {
     </>
   )
 }
+
+

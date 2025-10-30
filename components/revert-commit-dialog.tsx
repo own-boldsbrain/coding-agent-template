@@ -14,7 +14,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { Claude, Codex, Copilot, Cursor, Gemini, OpenCode } from '@/components/logos'
+import { Claude, Codex, Copilot, Cursor, Gemini, OpenCode, Qwen, DeepSeek } from '@/components/logos'
 
 interface Commit {
   sha: string
@@ -57,6 +57,8 @@ const CODING_AGENTS = [
   { value: 'cursor', label: 'Cursor', icon: Cursor },
   { value: 'gemini', label: 'Gemini', icon: Gemini },
   { value: 'opencode', label: 'opencode', icon: OpenCode },
+  { value: 'qwen', label: 'Qwen', icon: Qwen },
+  { value: 'deepseek', label: 'DeepSeek', icon: DeepSeek },
 ] as const
 
 const AGENT_MODELS = {
@@ -280,3 +282,4 @@ export function RevertCommitDialog({
     </AlertDialog>
   )
 }
+

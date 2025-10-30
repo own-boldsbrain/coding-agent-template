@@ -1,0 +1,14 @@
+export async function runCommandInSandbox(
+  sandbox: Sandbox,
+  command: string,
+  args: string[] = [],
+): Promise<CommandResult> {
+  const result = await sandbox.commands.run({ command, args })
+  return {
+    success: result.success,
+    exitCode: result.exitCode,
+    output: result.output,
+    error: result.error,
+    command: args.length > 0 ? command + ' ' + args.join(' ') : command
+  }
+}

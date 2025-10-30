@@ -11,6 +11,8 @@ const AGENT_PROVIDER_MAP: Record<string, Provider | null> = {
   cursor: 'cursor',
   gemini: 'gemini',
   opencode: 'openai', // OpenCode can use OpenAI or Anthropic, but primarily OpenAI
+  qwen: null, // Local Ollama, no API key needed
+  deepseek: null, // Local Ollama, no API key needed
 }
 
 // Check if a model is an Anthropic model

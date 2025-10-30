@@ -6,10 +6,12 @@ import { executeCopilotInSandbox } from './copilot'
 import { executeCursorInSandbox } from './cursor'
 import { executeGeminiInSandbox } from './gemini'
 import { executeOpenCodeInSandbox } from './opencode'
+import { executeQwenInSandbox } from './qwen'
+import { executeDeepSeekInSandbox } from './deepseek'
 import { TaskLogger } from '@/lib/utils/task-logger'
 import { Connector } from '@/lib/db/schema'
 
-export type AgentType = 'claude' | 'codex' | 'copilot' | 'cursor' | 'gemini' | 'opencode'
+export type AgentType = 'claude' | 'codex' | 'copilot' | 'cursor' | 'gemini' | 'opencode' | 'qwen' | 'deepseek'
 
 // Re-export types
 export type { AgentExecutionResult } from '../types'
@@ -138,6 +140,13 @@ export async function executeAgentInSandbox(
           sessionId,
         )
 
+      
+      case 'qwen':
+        return await executeQwenInSandbox(sandbox, instruction, logger, selectedModel, mcpServers)
+
+      case 'deepseek':
+        return await executeDeepSeekInSandbox(sandbox, instruction, logger, selectedModel, mcpServers)
+
       default:
         return {
           success: false,
@@ -157,3 +166,4 @@ export async function executeAgentInSandbox(
     process.env.GITHUB_TOKEN = originalEnv.GITHUB_TOKEN
   }
 }
+

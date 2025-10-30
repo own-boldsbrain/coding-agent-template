@@ -35,7 +35,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Claude, Codex, Copilot, Cursor, Gemini, OpenCode } from '@/components/logos'
+import { Claude, Codex, Copilot, Cursor, Gemini, OpenCode, Qwen, DeepSeek } from '@/components/logos'
 import { useTasks } from '@/components/app-layout'
 import {
   getShowFilesPane,
@@ -106,6 +106,8 @@ const CODING_AGENTS = [
   { value: 'cursor', label: 'Cursor', icon: Cursor },
   { value: 'gemini', label: 'Gemini', icon: Gemini },
   { value: 'opencode', label: 'opencode', icon: OpenCode },
+  { value: 'qwen', label: 'Qwen', icon: Qwen },
+  { value: 'deepseek', label: 'DeepSeek', icon: DeepSeek },
 ] as const
 
 const AGENT_MODELS = {
@@ -143,15 +145,23 @@ const AGENT_MODELS = {
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   ],
   opencode: [
-    { value: 'gpt-5', label: 'GPT-5' },
-    { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
-    { value: 'gpt-5-nano', label: 'GPT-5 Nano' },
-    { value: 'gpt-4.1', label: 'GPT-4.1' },
-    { value: 'claude-sonnet-4-5-20250929', label: 'Sonnet 4.5' },
-    { value: 'claude-sonnet-4-20250514', label: 'Sonnet 4' },
-    { value: 'claude-opus-4-1-20250805', label: 'Opus 4.1' },
-  ],
-} as const
+      { value: 'gpt-5', label: 'GPT-5' },
+      { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
+      { value: 'gpt-5-nano', label: 'GPT-5 Nano' },
+      { value: 'gpt-4.1', label: 'GPT-4.1' },
+      { value: 'claude-sonnet-4-5-20250929', label: 'Sonnet 4.5' },
+      { value: 'claude-sonnet-4-20250514', label: 'Sonnet 4' },
+      { value: 'claude-opus-4-1-20250805', label: 'Opus 4.1' },
+    ],
+    qwen: [
+      { value: 'qwen2.5-coder:32b', label: 'Qwen 2.5 Coder 32B' },
+      { value: 'qwen2.5-coder:7b', label: 'Qwen 2.5 Coder 7B' },
+    ],
+    deepseek: [
+      { value: 'deepseek-coder-v2:16b', label: 'DeepSeek Coder V2 16B' },
+      { value: 'deepseek-r1:14b', label: 'DeepSeek R1 14B' },
+    ],
+  } as const
 
 const DEFAULT_MODELS = {
   claude: 'claude-sonnet-4-5-20250929',
@@ -160,6 +170,8 @@ const DEFAULT_MODELS = {
   cursor: 'auto',
   gemini: 'gemini-2.5-pro',
   opencode: 'gpt-5',
+  qwen: 'qwen2.5-coder:32b',
+  deepseek: 'deepseek-coder-v2:16b',
 } as const
 
 export function TaskDetails({ task, maxSandboxDuration = 300 }: TaskDetailsProps) {
@@ -2583,3 +2595,7 @@ export function TaskDetails({ task, maxSandboxDuration = 300 }: TaskDetailsProps
     </div>
   )
 }
+
+
+
+
