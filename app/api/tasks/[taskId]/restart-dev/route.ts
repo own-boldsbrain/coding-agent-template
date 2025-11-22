@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Writable } from 'node:stream'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -145,7 +146,6 @@ export default mergeConfig(userConfig, defineConfig({
     const fullDevCommand = devArgs.length > 0 ? `${devCommand} ${devArgs.join(' ')}` : devCommand
 
     // Import Writable for stream capture
-    const { Writable } = await import('stream')
 
     const captureServerStdout = new Writable({
       write(chunk: Buffer | string, _encoding: BufferEncoding, callback: (error?: Error | null) => void) {

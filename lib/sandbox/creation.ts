@@ -1,4 +1,5 @@
 import { Sandbox } from '@vercel/sandbox'
+import { Writable } from 'node:stream'
 import { validateEnvironmentVariables, createAuthenticatedRepoUrl } from './config'
 import { runCommandInSandbox, runInProject, PROJECT_DIR } from './commands'
 import { generateId } from '@/lib/utils/id'
@@ -417,7 +418,6 @@ fi
             const fullDevCommand = devArgs.length > 0 ? `${devCommand} ${devArgs.join(' ')}` : devCommand
 
             // Import Writable for stream capture
-            const { Writable } = await import('stream')
 
             const captureServerStdout = new Writable({
               write(chunk: Buffer | string, _encoding: BufferEncoding, callback: (error?: Error | null) => void) {

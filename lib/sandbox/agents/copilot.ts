@@ -1,4 +1,5 @@
 import { Sandbox } from '@vercel/sandbox'
+import { Writable } from 'node:stream'
 import { runCommandInSandbox, runInProject, PROJECT_DIR } from '../commands'
 import { AgentExecutionResult } from '../types'
 import { redactSensitiveInfo } from '@/lib/utils/logging'
@@ -193,7 +194,6 @@ EOF`
     let capturedError = ''
 
     // Create custom writable streams to capture the output
-    const { Writable } = await import('stream')
 
     interface WriteCallback {
       (error?: Error | null): void
