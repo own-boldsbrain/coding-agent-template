@@ -1,0 +1,50 @@
+# GitHub App & Infra – Recursos Reaproveitados
+
+Somente os ativos abaixo permanecem da tentativa anterior. Todo o restante do
+ambiente (contêineres, imagens, volumes, portas expostas etc.) será recriado do
+zero para operar no modo **total docker**.
+
+## 1. Credenciais fixas
+
+| Variável/Segredo | Onde vive | Observações |
+| ---------------- | --------- | ----------- |
+| SANDBOX_VERCEL_TOKEN | Azure Key Vault / Vercel Project | Necessário apenas para histórico; Docker usa defaults locais. |
+| SANDBOX_VERCEL_TEAM_ID | Azure Key Vault / Vercel Project | Mantido para retrocompatibilidade de APIs. |
+| SANDBOX_VERCEL_PROJECT_ID | Azure Key Vault / Vercel Project | Idem acima. |
+| JWE_SECRET | Secrets manager | Base64 32 bytes. |
+| ENCRYPTION_KEY | Secrets manager | Hex 32 bytes (usada para criptografar tokens). |
+| POSTGRES_URL | Neon / Postgres local | Conferir se aponta para instância atual. |
+
+> Preencher a coluna "Onde vive" com o cofre/serviço correto conforme forem
+> migrados. Os valores em si **não** devem ser registrados neste arquivo.
+
+## 2. Modelos e provedores de IA
+
+| Provider | Tipo | Observação |
+| -------- | ---- | ---------- |
+| Anthropic (Claude) | API Key | Reaproveitar chave existente. |
+| OpenAI / o1 | API Key | Opcional, apenas se tarefas exigirem. |
+| Gemini | API Key | Somente se habilitado. |
+| Cursor / Codex CLI | API Key | Definir fallback. |
+
+> Acrescente linhas extras para modelos específicos (ex.: Ollama local) se
+> forem mantidos entre tentativas.
+
+## 3. Integrações GitHub
+
+| Item | Valor | Observação |
+| ---- | ----- | ---------- |
+| GitHub App Name | coding-agent-app | Mesmo app da tentativa anterior. |
+| App ID | a49bbcc9908a | Confirmar no portal GitHub Apps. |
+| Default Image/Container | coding-agent-template-app:latest | Referenciado apenas como histórico; novas imagens serão geradas. |
+| Portas Publicadas | 3000:3000 / 3001:3001 | Liberadas anteriormente; novas execuções podem usar outras portas conforme docker compose. |
+
+## 4. Itens que **não** serão reaproveitados
+
+- Contêineres ativos `coding-agent-app`, `a49bbcc9908a` e derivados
+- Imagem `coding-agent-template-app:latest`
+- Volumes de trabalho/cache criados durante execuções anteriores
+- Regras de rede ou portas adicionais criadas apenas para esses recursos
+
+Todo o ciclo deve ser reconstruído executando os scripts de limpeza descritos em
+`README.md` > *Migração para Sandbox Docker*.

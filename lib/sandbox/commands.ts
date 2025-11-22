@@ -1,7 +1,7 @@
 import { SandboxType as Sandbox } from './index'
 
-// Project directory where repo is cloned
-export const PROJECT_DIR = '/vercel/sandbox/project'
+// Project directory mounted via Docker volume
+export const PROJECT_DIR = '/workspace/project'
 
 export interface CommandResult {
   success: boolean

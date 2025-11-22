@@ -311,6 +311,9 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+> Já executou o template usando o sandbox da Vercel? Veja o guia de
+> migração para Docker em [`docs/docker-migration.md`](./docs/docker-migration.md).
+
 ## Development
 
 ### Database Operations
@@ -464,7 +467,7 @@ Create OAuth applications for your chosen authentication provider(s). See the [L
 
 Before running migrations, you need to handle existing data:
 
-**Option A: Fresh Start (Recommended for Development)**
+###### Option A: Fresh Start (Recommended for Development)
 
 If you don't have production data to preserve:
 
@@ -475,7 +478,7 @@ pnpm db:push --force
 # This will create all new tables with proper structure
 ```
 
-**Option B: Preserve Existing Data (Production)**
+###### Option B: Preserve Existing Data (Production)
 
 If you have existing tasks/connectors to preserve:
 
@@ -497,7 +500,7 @@ VALUES (
 );
 ```
 
-2. **Update existing records:**
+1. **Update existing records:**
 
 ```sql
 -- Add userId to existing tasks
@@ -516,7 +519,7 @@ ALTER TABLE connectors ADD CONSTRAINT connectors_user_id_fkey FOREIGN KEY (user_
 -- Note: You'll need to manually encrypt existing env values using your ENCRYPTION_KEY
 ```
 
-3. **Run the standard migrations:**
+1. **Run the standard migrations:**
 
 ```bash
 pnpm db:generate
@@ -542,6 +545,7 @@ pnpm install
 ##### Step 7: Verify Security Fix
 
 Confirm that:
+
 - Users can only see their own tasks
 - File diff/files endpoints require GitHub connection
 - Users without GitHub connection see "GitHub authentication required" errors
