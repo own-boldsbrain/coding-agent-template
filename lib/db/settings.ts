@@ -17,22 +17,17 @@ export async function getSetting(
   userId: string | undefined,
   defaultValue?: string,
 ): Promise<string | undefined> {
-  if (!userId || !process.env.POSTGRES_URL) {
+  if (!userId) {
     return defaultValue
   }
 
-  try {
-    const userSetting = await db
-      .select()
-      .from(settings)
-      .where(and(eq(settings.userId, userId), eq(settings.key, key)))
-      .limit(1)
+  const userSetting = await db
+    .select()
+    .from(settings)
+    .where(and(eq(settings.userId, userId), eq(settings.key, key)))
+    .limit(1)
 
-    return userSetting[0]?.value ?? defaultValue
-  } catch (error) {
-    console.error('Failed to load setting from database', error)
-    return defaultValue
-  }
+  return userSetting[0]?.value ?? defaultValue
 }
 
 /**
@@ -49,7 +44,7 @@ export async function getNumericSetting(
   defaultValue?: number,
 ): Promise<number | undefined> {
   const value = await getSetting(key, userId, defaultValue?.toString())
-  return value ? Number.parseInt(value, 10) : defaultValue
+  return value ? parseInt(value, 10) : defaultValue
 }
 
 /**
