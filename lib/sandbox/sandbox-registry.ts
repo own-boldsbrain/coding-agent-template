@@ -22,6 +22,26 @@ export function getSandbox(taskId: string): Sandbox | undefined {
   return activeSandboxes.get(taskId)
 }
 
+export async function getOrReconnectSandbox(taskId: string, sandboxId?: string): Promise<Sandbox | undefined> {
+  const existing = getSandbox(taskId)
+  if (existing) {
+    return existing
+  }
+
+  if (!sandboxId) {
+    return undefined
+  }
+
+  try {
+    const sandbox = await Sandbox.get({ sandboxId })
+    registerSandbox(taskId, sandbox)
+    return sandbox
+  } catch (error) {
+    console.error('Failed to reconnect sandbox', error)
+    return undefined
+  }
+}
+
 export async function killSandbox(taskId: string): Promise<{ success: boolean; error?: string }> {
   const sandbox = activeSandboxes.get(taskId)
 
@@ -47,7 +67,7 @@ export async function killSandbox(taskId: string): Promise<{ success: boolean; e
     // Stop the sandbox using the SDK
     try {
       await sandbox.stop()
-    } catch (stopError) {
+    } catch (_stopError) {
       // Sandbox may already be stopped, that's okay
       console.log('Sandbox stop completed or was already stopped')
     }
