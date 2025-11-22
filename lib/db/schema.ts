@@ -17,7 +17,7 @@ export const users = pgTable(
     id: text('id').primaryKey(), // Internal user ID (we generate this)
     // Primary OAuth account info (how they signed in)
     provider: text('provider', {
-      enum: ['github', 'vercel'],
+      enum: ['github'],
     }).notNull(), // Primary auth provider
     externalId: text('external_id').notNull(), // External ID from OAuth provider
     accessToken: text('access_token').notNull(), // Encrypted OAuth access token
@@ -40,7 +40,7 @@ export const users = pgTable(
 
 export const insertUserSchema = z.object({
   id: z.string().optional(), // Auto-generated if not provided
-  provider: z.enum(['github', 'vercel']),
+  provider: z.enum(['github']),
   externalId: z.string().min(1, 'External ID is required'),
   accessToken: z.string(),
   refreshToken: z.string().optional(),
@@ -56,7 +56,7 @@ export const insertUserSchema = z.object({
 
 export const selectUserSchema = z.object({
   id: z.string(),
-  provider: z.enum(['github', 'vercel']),
+  provider: z.enum(['github']),
   externalId: z.string(),
   accessToken: z.string(),
   refreshToken: z.string().nullable(),
@@ -84,7 +84,7 @@ export const tasks = pgTable('tasks', {
   selectedAgent: text('selected_agent').default('claude'),
   selectedModel: text('selected_model'),
   installDependencies: boolean('install_dependencies').default(false),
-  maxDuration: integer('max_duration').default(parseInt(process.env.MAX_SANDBOX_DURATION || '300', 10)),
+  maxDuration: integer('max_duration').default(Number.parseInt(process.env.MAX_SANDBOX_DURATION || '300', 10)),
   keepAlive: boolean('keep_alive').default(false),
   status: text('status', {
     enum: ['pending', 'processing', 'completed', 'error', 'stopped'],
@@ -124,7 +124,7 @@ export const insertTaskSchema = z.object({
     .default('claude'),
   selectedModel: z.string().optional(),
   installDependencies: z.boolean().default(false),
-  maxDuration: z.number().default(parseInt(process.env.MAX_SANDBOX_DURATION || '300', 10)),
+  maxDuration: z.number().default(Number.parseInt(process.env.MAX_SANDBOX_DURATION || '300', 10)),
   keepAlive: z.boolean().default(false),
   status: z.enum(['pending', 'processing', 'completed', 'error', 'stopped']).default('pending'),
   progress: z.number().min(0).max(100).default(0),
@@ -429,5 +429,3 @@ export type InsertSetting = z.infer<typeof insertSettingSchema>
 
 // Keep legacy export for backwards compatibility during migration
 export const userConnections = accounts
-export type UserConnection = Account
-export type InsertUserConnection = InsertAccount

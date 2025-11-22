@@ -1,4 +1,4 @@
-import { exec, spawn, ChildProcessWithoutNullStreams } from 'node:child_process'
+import { exec, spawn, ChildProcess } from 'node:child_process'
 import { promisify } from 'node:util'
 import { randomBytes } from 'node:crypto'
 import os from 'node:os'
@@ -16,6 +16,23 @@ process.env.SANDBOX_VERCEL_TOKEN ??= 'docker-local'
 const IMAGE_NAME = 'coding-agent-sandbox:latest'
 const IDENT_LABEL = 'coding-agent-template'
 const CONFIG_LABEL = 'coding-agent-template.config'
+const WORKSPACE_DIR = '/workspace'
+const PROJECT_DIR = '/workspace/project'
+
+type SandboxSourceConfig =
+  | string
+  | {
+      type: 'git'
+      url: string
+      revision?: string
+      depth?: number
+    }
+
+interface NormalizedSourceConfig {
+  url: string
+  revision?: string
+  depth?: number
+}
 
 export interface DockerSandboxConfig {
   teamId?: string
@@ -26,6 +43,7 @@ export interface DockerSandboxConfig {
   runtime?: string
   resources?: { vcpus?: number }
   taskId?: string
+  source?: SandboxSourceConfig
 }
 
 interface RunCommandOptions {
@@ -36,6 +54,7 @@ interface RunCommandOptions {
   detached?: boolean
   stdout?: Writable
   stderr?: Writable
+  sudo?: boolean
 }
 
 interface RunCommandResult {
@@ -70,7 +89,7 @@ export class DockerSandbox {
   private readonly ports: number[]
   private workspaceVolume: string
   private cacheVolume: string
-  private readonly detachedProcesses = new Set<ChildProcessWithoutNullStreams>()
+  private readonly detachedProcesses = new Set<ChildProcess>()
 
   public client: null = null
   public routes: null = null
@@ -215,6 +234,8 @@ CMD ["/bin/bash"]
 
       this.containerId = stdout.trim()
 
+      await this.setupSource()
+
       if (this.config.timeout && this.config.timeout > 0) {
         this.timeoutHandle = setTimeout(() => {
           this.stop().catch(() => {
@@ -226,6 +247,85 @@ CMD ["/bin/bash"]
       const message = error instanceof Error ? error.message : 'Unknown error'
       throw new Error(`Failed to create Docker sandbox: ${message}`)
     }
+  }
+
+  private async setupSource() {
+    if (!this.config.source) {
+      return
+    }
+
+    await this.prepareProjectDirectory()
+    const normalizedSource = this.normalizeSource(this.config.source)
+    await this.cloneRepository(normalizedSource)
+  }
+
+  private normalizeSource(source: SandboxSourceConfig): NormalizedSourceConfig {
+    if (typeof source === 'string') {
+      return { url: source }
+    }
+
+    if (source.type === 'git') {
+      return { url: source.url, revision: source.revision, depth: source.depth }
+    }
+
+    throw new Error('Unsupported sandbox source configuration')
+  }
+
+  private async prepareProjectDirectory() {
+    await this.runCommand('rm', ['-rf', PROJECT_DIR])
+    await this.runCommand('mkdir', ['-p', PROJECT_DIR])
+  }
+
+  private buildCloneArgs(source: NormalizedSourceConfig): string[] {
+    return [
+      'clone',
+      ...(source.depth && source.depth > 0 ? ['--depth', source.depth.toString(), '--single-branch'] : []),
+      ...(source.revision ? ['--branch', source.revision] : []),
+      source.url,
+      PROJECT_DIR,
+    ]
+  }
+
+  private async cloneRepository(source: NormalizedSourceConfig) {
+    const cloneResult = await this.runCommand({ cmd: 'git', args: this.buildCloneArgs(source), cwd: WORKSPACE_DIR })
+    if (!cloneResult.success) {
+      const stderr = await this.safeReadStream(cloneResult.stderr)
+      throw new Error(this.buildErrorMessage('Failed to clone source repository', stderr))
+    }
+
+    if (source.revision && (!source.depth || source.depth <= 0)) {
+      const checkoutResult = await this.runCommand({
+        cmd: 'git',
+        args: ['checkout', source.revision],
+        cwd: PROJECT_DIR,
+      })
+      if (!checkoutResult.success) {
+        const stderr = await this.safeReadStream(checkoutResult.stderr)
+        throw new Error(this.buildErrorMessage('Failed to checkout revision', stderr))
+      }
+    }
+
+    await this.runCommand('git', ['config', '--global', '--add', 'safe.directory', PROJECT_DIR]).catch(() => {})
+  }
+
+  private async safeReadStream(streamGetter?: () => Promise<string>): Promise<string> {
+    if (!streamGetter) {
+      return ''
+    }
+
+    try {
+      return await streamGetter()
+    } catch {
+      return ''
+    }
+  }
+
+  private buildErrorMessage(base: string, detail?: string) {
+    const trimmedDetail = detail?.trim()
+    if (trimmedDetail) {
+      return `${base}: ${trimmedDetail}`
+    }
+    return base
   }
 
   private buildExecArgs(options: RunCommandOptions): string[] {
@@ -244,18 +344,30 @@ CMD ["/bin/bash"]
     args.push(this.sandboxId)
 
     if (options.cwd) {
-      const joinedArgs = (options.args || []).map((arg) => escapeArg(arg)).join(' ')
-      const command = options.args && options.args.length > 0 ? `${options.cmd} ${joinedArgs}` : options.cmd
-      const shellCommand = `cd ${options.cwd} && ${command}`
-      args.push('sh', '-c', shellCommand)
+      this.appendCwdCommand(args, options)
     } else {
-      args.push(options.cmd)
-      if (options.args && options.args.length > 0) {
-        args.push(...options.args)
-      }
+      this.appendDirectCommand(args, options)
     }
 
     return args
+  }
+
+  private appendCwdCommand(args: string[], options: RunCommandOptions) {
+    const joinedArgs = (options.args || []).map((arg) => escapeArg(arg)).join(' ')
+    const command = options.args && options.args.length > 0 ? `${options.cmd} ${joinedArgs}` : options.cmd
+    const sudoCommand = options.sudo ? `sudo ${command}` : command
+    const shellCommand = `cd ${options.cwd} && ${sudoCommand}`
+    args.push('sh', '-c', shellCommand)
+  }
+
+  private appendDirectCommand(args: string[], options: RunCommandOptions) {
+    if (options.sudo) {
+      args.push('sudo')
+    }
+    args.push(options.cmd)
+    if (options.args && options.args.length > 0) {
+      args.push(...options.args)
+    }
   }
 
   async runCommand(command: string, args?: string[]): Promise<RunCommandResult>
@@ -269,9 +381,7 @@ CMD ["/bin/bash"]
     }
 
     const options: RunCommandOptions =
-      typeof commandOrOptions === 'string'
-        ? { cmd: commandOrOptions, args: positionalArgs }
-        : commandOrOptions
+      typeof commandOrOptions === 'string' ? { cmd: commandOrOptions, args: positionalArgs } : commandOrOptions
 
     const dockerArgs = this.buildExecArgs(options)
 

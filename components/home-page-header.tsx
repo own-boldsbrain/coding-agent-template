@@ -233,10 +233,9 @@ export function HomePageHeader({
     }
   }
 
-  // Get session to check auth provider
+  // Get session to check authentication state
   const session = useAtomValue(sessionAtom)
-  // Check if user is authenticated with GitHub (not just connected)
-  const isGitHubAuthUser = session.authProvider === 'github'
+  const isGitHubAuthUser = Boolean(session.user)
 
   // Always render leftActions container to prevent layout shift
   const leftActions = (

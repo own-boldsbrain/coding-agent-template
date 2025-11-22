@@ -45,10 +45,8 @@ export async function upsertUser(
   }
 
   // Second check: Is this a GitHub account already connected to an existing user via accounts table?
-  // This prevents duplicate accounts when someone:
-  // 1. Signs in with Vercel
-  // 2. Connects GitHub
-  // 3. Later signs in directly with GitHub
+  // This prevents duplicate accounts when someone previously connected GitHub through another auth flow
+  // and later signs in directly with GitHub.
   if (provider === 'github') {
     const existingAccount = await db
       .select({ userId: accounts.userId })
@@ -100,7 +98,7 @@ export async function getUserById(userId: string) {
 /**
  * Get user by auth provider and external ID
  */
-export async function getUserByExternalId(provider: 'github' | 'vercel', externalId: string) {
+export async function getUserByExternalId(provider: 'github', externalId: string) {
   const result = await db
     .select()
     .from(users)

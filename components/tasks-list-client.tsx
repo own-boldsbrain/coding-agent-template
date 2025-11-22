@@ -32,7 +32,6 @@ import { PRCheckStatus } from '@/components/pr-check-status'
 
 interface TasksListClientProps {
   user: Session['user'] | null
-  authProvider: Session['authProvider'] | null
   initialStars?: number
 }
 
@@ -100,7 +99,7 @@ function getTimeAgo(date: Date): string {
   return new Date(date).toLocaleDateString()
 }
 
-export function TasksListClient({ user, authProvider, initialStars = 1056 }: TasksListClientProps) {
+export function TasksListClient({ user, initialStars = 1056 }: Readonly<TasksListClientProps>) {
   const { toggleSidebar, refreshTasks } = useTasks()
   const router = useRouter()
   const [tasks, setTasks] = useState<Task[]>([])
@@ -296,7 +295,7 @@ export function TasksListClient({ user, authProvider, initialStars = 1056 }: Tas
                   <span className="hidden sm:inline">Deploy Your Own</span>
                 </a>
               </Button>
-              <User user={user} authProvider={authProvider} />
+              <User user={user} />
             </div>
           }
         />

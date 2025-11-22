@@ -22,7 +22,6 @@ export default async function TaskPage({ params }: TaskPageProps) {
     <TaskPageClient
       taskId={taskId}
       user={session?.user ?? null}
-      authProvider={session?.authProvider ?? null}
       initialStars={stars}
       maxSandboxDuration={maxSandboxDuration}
     />

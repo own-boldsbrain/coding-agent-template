@@ -7,22 +7,18 @@ import { useAtomValue } from 'jotai'
 import { sessionAtom, sessionInitializedAtom } from '@/lib/atoms/session'
 import { useMemo } from 'react'
 
-export function User(props: { user?: Session['user'] | null; authProvider?: Session['authProvider'] | null }) {
+export function User({ user: initialUser }: Readonly<{ user?: Session['user'] | null }>) {
   const session = useAtomValue(sessionAtom)
   const initialized = useAtomValue(sessionInitializedAtom)
 
   // Use session values if initialized, otherwise use props
   const user = useMemo(
-    () => (initialized ? (session.user ?? null) : (props.user ?? null)),
-    [initialized, session.user, props.user],
-  )
-  const authProvider = useMemo(
-    () => (initialized ? (session.authProvider ?? 'vercel') : (props.authProvider ?? 'vercel')),
-    [initialized, session.authProvider, props.authProvider],
+    () => (initialized ? (session.user ?? null) : (initialUser ?? null)),
+    [initialized, session.user, initialUser],
   )
 
   if (user) {
-    return <SignOut user={user} authProvider={authProvider} />
+    return <SignOut user={user} />
   } else {
     return <SignIn />
   }

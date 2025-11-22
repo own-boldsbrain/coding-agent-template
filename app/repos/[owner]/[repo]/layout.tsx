@@ -16,13 +16,7 @@ export default async function Layout({ params, children }: LayoutPageProps) {
   const stars = await getGitHubStars()
 
   return (
-    <RepoLayout
-      owner={owner}
-      repo={repo}
-      user={session?.user ?? null}
-      authProvider={session?.authProvider ?? null}
-      initialStars={stars}
-    >
+    <RepoLayout owner={owner} repo={repo} user={session?.user ?? null} initialStars={stars}>
       {children}
     </RepoLayout>
   )

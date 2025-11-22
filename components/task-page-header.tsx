@@ -13,11 +13,10 @@ import { GitHubStarsButton } from '@/components/github-stars-button'
 interface TaskPageHeaderProps {
   task: Task
   user: Session['user'] | null
-  authProvider: Session['authProvider'] | null
   initialStars?: number
 }
 
-export function TaskPageHeader({ task, user, authProvider, initialStars = 1056 }: TaskPageHeaderProps) {
+export function TaskPageHeader({ task, user, initialStars = 1056 }: Readonly<TaskPageHeaderProps>) {
   const { toggleSidebar } = useTasks()
 
   return (
@@ -43,7 +42,7 @@ export function TaskPageHeader({ task, user, authProvider, initialStars = 1056 }
             </a>
           </Button>
           <TaskActions task={task} />
-          <User user={user} authProvider={authProvider} />
+          <User user={user} />
         </div>
       }
     />

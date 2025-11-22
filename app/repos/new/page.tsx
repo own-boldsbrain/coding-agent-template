@@ -204,7 +204,7 @@ export default function NewRepoPage() {
               </Button>
 
               {/* User Authentication */}
-              <User user={session.user} authProvider={session.authProvider} />
+              <User user={session.user} />
             </div>
           }
         />

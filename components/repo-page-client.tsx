@@ -17,17 +17,16 @@ interface RepoPageClientProps {
   owner: string
   repo: string
   user: Session['user'] | null
-  authProvider: Session['authProvider'] | null
   initialStars?: number
 }
 
-export function RepoPageClient({ owner, repo, user, authProvider, initialStars = 1056 }: RepoPageClientProps) {
+export function RepoPageClient({ owner, repo, user, initialStars = 1056 }: Readonly<RepoPageClientProps>) {
   const { toggleSidebar } = useTasks()
   const [activeTab, setActiveTab] = useState('commits')
 
   return (
     <div className="flex-1 bg-background relative flex flex-col h-full overflow-hidden">
-      <div className="flex-shrink-0 p-3">
+      <div className="shrink-0 p-3">
         <PageHeader
           showMobileMenu={true}
           onToggleMobileMenu={toggleSidebar}
@@ -62,7 +61,7 @@ export function RepoPageClient({ owner, repo, user, authProvider, initialStars =
               </Button>
 
               {/* User Authentication */}
-              <User user={user} authProvider={authProvider} />
+              <User user={user} />
             </div>
           }
         />

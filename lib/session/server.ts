@@ -7,11 +7,7 @@ export async function getSessionFromCookie(cookieValue?: string): Promise<Sessio
   if (cookieValue) {
     const decrypted = await decryptJWE<Session>(cookieValue)
     if (decrypted) {
-      return {
-        created: decrypted.created,
-        authProvider: decrypted.authProvider,
-        user: decrypted.user,
-      }
+      return decrypted
     }
   }
 }

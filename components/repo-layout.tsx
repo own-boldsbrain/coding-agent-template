@@ -17,12 +17,11 @@ interface RepoLayoutProps {
   owner: string
   repo: string
   user: Session['user'] | null
-  authProvider: Session['authProvider'] | null
   initialStars?: number
   children: React.ReactNode
 }
 
-export function RepoLayout({ owner, repo, user, authProvider, initialStars = 1056, children }: RepoLayoutProps) {
+export function RepoLayout({ owner, repo, user, initialStars = 1056, children }: Readonly<RepoLayoutProps>) {
   const { toggleSidebar } = useTasks()
   const pathname = usePathname()
   const router = useRouter()
@@ -43,7 +42,7 @@ export function RepoLayout({ owner, repo, user, authProvider, initialStars = 105
 
   return (
     <div className="flex-1 bg-background relative flex flex-col h-full overflow-hidden">
-      <div className="flex-shrink-0 p-3">
+      <div className="shrink-0 p-3">
         <PageHeader
           showMobileMenu={true}
           onToggleMobileMenu={toggleSidebar}
@@ -78,7 +77,7 @@ export function RepoLayout({ owner, repo, user, authProvider, initialStars = 105
               </Button>
 
               {/* User Authentication */}
-              <User user={user} authProvider={authProvider} />
+              <User user={user} />
             </div>
           }
         />
@@ -86,7 +85,7 @@ export function RepoLayout({ owner, repo, user, authProvider, initialStars = 105
 
       {/* Main content with tabs */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-3">
-        <div className="flex-shrink-0 border-b border-border mb-4">
+        <div className="shrink-0 border-b border-border mb-4">
           <nav className="flex items-center gap-6" aria-label="Repository navigation">
             {tabs.map((tab) => {
               const isActive = pathname === tab.href
@@ -95,7 +94,7 @@ export function RepoLayout({ owner, repo, user, authProvider, initialStars = 105
                   key={tab.name}
                   href={tab.href}
                   className={cn(
-                    'flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 -mb-[1px] transition-colors',
+                    'flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 -mb-px transition-colors',
                     isActive
                       ? 'border-primary text-foreground'
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
@@ -109,7 +108,7 @@ export function RepoLayout({ owner, repo, user, authProvider, initialStars = 105
               onClick={handleNewTask}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 -mb-[1px] text-muted-foreground hover:text-foreground"
+              className="h-8 w-8 p-0 -mb-px text-muted-foreground hover:text-foreground"
               title="Create new task with this repository"
             >
               <Plus className="h-4 w-4" />

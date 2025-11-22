@@ -9,6 +9,7 @@ import { getUserGitHubToken } from '@/lib/github/user-token'
 import { registerSandbox, unregisterSandbox } from '@/lib/sandbox/sandbox-registry'
 import { runCommandInSandbox, runInProject, PROJECT_DIR } from '@/lib/sandbox/commands'
 import { detectPackageManager, installDependencies } from '@/lib/sandbox/package-manager'
+import { createAuthenticatedRepoUrl } from '@/lib/sandbox/config'
 import { createTaskLogger } from '@/lib/utils/task-logger'
 import { getMaxSandboxDuration } from '@/lib/db/settings'
 import { detectPortFromRepo } from '@/lib/sandbox/port-detection'
@@ -57,6 +58,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
           return NextResponse.json({ error: 'Sandbox is already running' }, { status: 400 })
         }
       } catch (error) {
+        console.error('Failed to reuse existing sandbox during restart', error)
         // Sandbox is not accessible, clear it from the database and registry, then continue
         await logger.info('Existing sandbox not accessible, clearing and creating new one')
         unregisterSandbox(taskId)
@@ -82,6 +84,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
 
     // Get GitHub token for authenticated API access
     const githubToken = await getUserGitHubToken()
+    const authenticatedRepoUrl = task.repoUrl ? createAuthenticatedRepoUrl(task.repoUrl, githubToken) : undefined
 
     // Detect the appropriate port for the project
     const port = task.repoUrl ? await detectPortFromRepo(task.repoUrl, githubToken) : 3000
@@ -92,15 +95,14 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       teamId: process.env.SANDBOX_VERCEL_TEAM_ID!,
       projectId: process.env.SANDBOX_VERCEL_PROJECT_ID!,
       token: process.env.SANDBOX_VERCEL_TOKEN!,
-      source:
-        task.repoUrl && task.branchName
-          ? {
-              type: 'git' as const,
-              url: task.repoUrl,
-              revision: task.branchName,
-              depth: 1,
-            }
-          : undefined,
+      source: authenticatedRepoUrl
+        ? {
+            type: 'git' as const,
+            url: authenticatedRepoUrl,
+            revision: task.branchName || undefined,
+            depth: 1,
+          }
+        : undefined,
       timeout: maxDurationMinutes * 60 * 1000, // Convert minutes to milliseconds
       ports: [port],
       runtime: 'node22',
@@ -171,10 +173,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
         const hasDevScript = packageJson?.scripts?.dev
 
         // Detect Vite projects (use port 5173)
-        let devPort = 3000
         const hasVite = packageJson?.dependencies?.vite || packageJson?.devDependencies?.vite
         if (hasVite) {
-          devPort = 5173
           await logger.info('Vite project detected, using port 5173')
         }
 
@@ -254,7 +254,7 @@ export default mergeConfig(userConfig, defineConfig({
           const fullDevCommand = devArgs.length > 0 ? `${devCommand} ${devArgs.join(' ')}` : devCommand
 
           // Import Writable for stream capture
-          const { Writable } = await import('stream')
+          const { Writable } = await import('node:stream')
 
           const captureServerStdout = new Writable({
             write(chunk: Buffer | string, _encoding: BufferEncoding, callback: (error?: Error | null) => void) {

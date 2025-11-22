@@ -16,7 +16,6 @@ import { GitHubStarsButton } from '@/components/github-stars-button'
 interface TaskPageClientProps {
   taskId: string
   user: Session['user'] | null
-  authProvider: Session['authProvider'] | null
   initialStars?: number
   maxSandboxDuration?: number
 }
@@ -24,10 +23,9 @@ interface TaskPageClientProps {
 export function TaskPageClient({
   taskId,
   user,
-  authProvider,
   initialStars = 1056,
   maxSandboxDuration = 300,
-}: TaskPageClientProps) {
+}: Readonly<TaskPageClientProps>) {
   const { task, isLoading, error } = useTask(taskId)
   const { toggleSidebar } = useTasks()
   const [logsPaneHeight, setLogsPaneHeight] = useState(40) // Default to collapsed height
@@ -63,7 +61,7 @@ export function TaskPageClient({
                 </Button>
 
                 {/* User Authentication */}
-                <User user={user} authProvider={authProvider} />
+                <User user={user} />
               </div>
             }
           />
@@ -102,7 +100,7 @@ export function TaskPageClient({
                     <span className="hidden sm:inline">Deploy Your Own</span>
                   </a>
                 </Button>
-                <User user={user} authProvider={authProvider} />
+                <User user={user} />
               </div>
             }
           />
@@ -121,8 +119,8 @@ export function TaskPageClient({
 
   return (
     <div className="flex-1 bg-background relative flex flex-col h-full overflow-hidden">
-      <div className="flex-shrink-0 p-3">
-        <TaskPageHeader task={task} user={user} authProvider={authProvider} initialStars={initialStars} />
+      <div className="shrink-0 p-3">
+        <TaskPageHeader task={task} user={user} initialStars={initialStars} />
       </div>
 
       {/* Task details */}

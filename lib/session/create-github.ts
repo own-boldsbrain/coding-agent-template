@@ -66,7 +66,6 @@ export async function createGitHubSession(accessToken: string, scope?: string): 
 
   const session: Session = {
     created: Date.now(),
-    authProvider: 'github',
     user: {
       id: userId, // Internal user ID
       username: githubUser.login,
