@@ -1,44 +1,31 @@
-import { db } from '@/lib/db/client'
-import { tasks } from '@/lib/db/schema'
-import { mergePullRequest } from '@/lib/github/client'
-import { unregisterSandbox } from '@/lib/sandbox/sandbox-registry'
-import { getServerSession } from '@/lib/session/get-server-session'
-import { Sandbox } from '@vercel/sandbox'
-import { and, eq, isNull } from 'drizzle-orm'
-import { type NextRequest, NextResponse } from 'next/server'
+/** @format */
+
+import { db } from "@/lib/db/client";
+import { tasks } from "@/lib/db/schema";
+import { mergePullRequest } from "@/lib/github/client";
+import { unregisterSandbox } from "@/lib/sandbox/sandbox-registry";
+import { type NextRequest, NextResponse } from "next/server";
+import {
+  buildTaskRouteContext,
+  getActiveSandbox,
+  handleTaskRouteError,
+} from "../task-route-helpers";
 
 interface RouteParams {
   params: Promise<{
-    taskId: string
-  }>
+    taskId: string;
+  }>;
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { taskId } = await params
-    const body = await request.json()
-    const { commitTitle, commitMessage, mergeMethod = 'squash' } = body
-
-    // Get the task
-    const [task] = await db
-      .select()
-      .from(tasks)
-      .where(and(eq(tasks.id, taskId), eq(tasks.userId, session.user.id), isNull(tasks.deletedAt)))
-      .limit(1)
-
-    if (!task) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
-    }
-
-    // Validate task has required fields
-    if (!task.repoUrl || !task.prNumber) {
-      return NextResponse.json({ error: 'Task does not have repository or PR information' }, { status: 400 })
-    }
+    const context = await buildTaskRouteContext({ params, requireRepo: true });
+    const { task } = context;
+    const {
+      commitTitle,
+      commitMessage,
+      mergeMethod = "squash",
+    } = await request.json();
 
     // Merge the pull request
     const result = await mergePullRequest({
@@ -47,27 +34,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       commitTitle,
       commitMessage,
       mergeMethod,
-    })
+    });
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || 'Failed to merge pull request' }, { status: 500 })
+      return NextResponse.json(
+        { error: result.error || "Failed to merge pull request" },
+        { status: 500 }
+      );
     }
 
     // Stop the sandbox if it exists
     if (task.sandboxId) {
       try {
-        const sandbox = await Sandbox.get({
-          sandboxId: task.sandboxId,
-          teamId: process.env.SANDBOX_VERCEL_TEAM_ID!,
-          projectId: process.env.SANDBOX_VERCEL_PROJECT_ID!,
-          token: process.env.SANDBOX_VERCEL_TOKEN!,
-        })
-
-        await sandbox.stop()
-        unregisterSandbox(taskId)
+        const sandbox = await getActiveSandbox(task.id, task.sandboxId);
+        await sandbox.stop();
+        unregisterSandbox(task.id);
       } catch (sandboxError) {
         // Log error but don't fail the merge
-        console.error('Error stopping sandbox after merge:', sandboxError)
+        console.error("Error stopping sandbox after merge:", sandboxError);
       }
     }
 
@@ -75,14 +59,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     await db
       .update(tasks)
       .set({
-        prStatus: 'merged',
+        prStatus: "merged",
         prMergeCommitSha: result.sha || null,
         sandboxId: null,
         sandboxUrl: null,
         completedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(tasks.id, taskId))
+      .where(eq(tasks.id, task.id));
 
     return NextResponse.json({
       success: true,
@@ -91,9 +75,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         message: result.message,
         sha: result.sha,
       },
-    })
+    });
   } catch (error) {
-    console.error('Error merging pull request:', error)
-    return NextResponse.json({ error: 'Failed to merge pull request' }, { status: 500 })
+    return handleTaskRouteError(error, "Failed to merge pull request");
   }
 }
