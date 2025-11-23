@@ -12,8 +12,14 @@ vi.mock('next/navigation', () => ({
 // Mock atoms
 vi.mock('@/lib/atoms/github-cache', async () => {
   const { atom } = await import('jotai')
+  const atoms = new Map()
   return {
-    githubReposAtomFamily: () => atom([]),
+    githubReposAtomFamily: (owner: string) => {
+      if (!atoms.has(owner)) {
+        atoms.set(owner, atom([]))
+      }
+      return atoms.get(owner)
+    },
   }
 })
 
@@ -111,7 +117,7 @@ vi.mock('@/components/ui/select', () => ({
   Select: ({ children }: any) => <div>{children}</div>,
   SelectContent: ({ children }: any) => <div>{children}</div>,
   SelectItem: ({ children, value }: any) => <div data-value={value}>{children}</div>,
-  SelectTrigger: ({ children }: any) => <button>{children}</button>,
+  SelectTrigger: ({ children }: any) => <div data-testid="select-trigger">{children}</div>,
   SelectValue: ({ children }: any) => <span>{children}</span>,
 }))
 
@@ -120,14 +126,28 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
   DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
   DropdownMenuLabel: ({ children }: any) => <div>{children}</div>,
   DropdownMenuSeparator: () => <hr />,
-  DropdownMenuTrigger: ({ children }: any) => <button>{children}</button>,
+  DropdownMenuTrigger: ({ children }: any) => <div data-testid="dropdown-trigger">{children}</div>,
 }))
 
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: any) => <div>{children}</div>,
   TooltipContent: ({ children }: any) => <div>{children}</div>,
   TooltipProvider: ({ children }: any) => <div>{children}</div>,
-  TooltipTrigger: ({ children }: any) => <button>{children}</button>,
+  TooltipTrigger: ({ children }: any) => <div data-testid="tooltip-trigger">{children}</div>,
+}))
+
+vi.mock('@/components/ui/checkbox', () => ({
+  Checkbox: ({ checked, onCheckedChange }: any) => (
+    <input type="checkbox" checked={checked} onChange={(e) => onCheckedChange(e.target.checked)} />
+  ),
+}))
+
+vi.mock('@/components/ui/label', () => ({
+  Label: ({ children }: any) => <label>{children}</label>,
+}))
+
+vi.mock('@/components/ui/badge', () => ({
+  Badge: ({ children }: any) => <span>{children}</span>,
 }))
 
 describe('TaskForm', () => {

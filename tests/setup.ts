@@ -10,3 +10,13 @@ const mockFetch = vi.fn((url) => {
 })
 
 vi.stubGlobal('fetch', mockFetch)
+
+// Mock ResizeObserver
+vi.stubGlobal(
+  'ResizeObserver',
+  class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  },
+)
