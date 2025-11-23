@@ -1,16 +1,22 @@
 /** @format */
 
-import { getUserGitHubToken } from '@/lib/github/user-token'
-import { getServerSession } from '@/lib/session/get-server-session'
-import { Octokit } from '@octokit/rest'
-import { NextResponse } from 'next/server'
+import { getUserGitHubToken } from "@/lib/github/user-token";
+import { getServerSession } from "@/lib/session/get-server-session";
+import { Octokit } from "@octokit/rest";
+import { NextResponse } from "next/server";
 
 interface RepoTemplate {
-  id: string
-  name: string
-  description: string
-  cloneUrl?: string
-  image?: string
+  id: string;
+  name: string;
+  description: string;
+  cloneUrl?: string;
+  image?: string;
+}
+
+class HttpError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
+  }
 }
 
 // Helper function to recursively copy files from a directory
@@ -21,72 +27,145 @@ async function copyFilesRecursively(
   sourcePath: string,
   repoOwner: string,
   repoName: string,
-  basePath: string,
+  basePath: string
 ) {
   try {
-    const { data: contents } = await octokit.repos.getContent({
-      owner: sourceOwner,
-      repo: sourceRepoName,
-      path: sourcePath,
-    })
+    const contents = await fetchDirectoryContents(
+      octokit,
+      sourceOwner,
+      sourceRepoName,
+      sourcePath
+    );
 
     if (!Array.isArray(contents)) {
-      return
+      return;
     }
 
     for (const item of contents) {
-      if (item.type === 'file' && item.download_url) {
-        try {
-          // Download file content
-          const response = await fetch(item.download_url)
-          if (!response.ok) {
-            throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`)
-          }
-          const content = await response.text()
-
-          // Calculate relative path by removing the base path prefix
-          const relativePath = basePath
-            ? item.path.startsWith(`${basePath}/`)
-              ? item.path.substring(basePath.length + 1)
-              : item.name
-            : item.path
-
-          // Create file in new repository
-          await octokit.repos.createOrUpdateFileContents({
-            owner: repoOwner,
-            repo: repoName,
-            path: relativePath,
-            message: `Add ${relativePath} from template`,
-            content: Buffer.from(content).toString('base64'),
-          })
-        } catch (error) {
-          console.error('Error copying file:', error)
-          // Continue with other files even if one fails
-        }
-      } else if (item.type === 'dir') {
-        // Recursively process directories
-        await copyFilesRecursively(octokit, sourceOwner, sourceRepoName, item.path, repoOwner, repoName, basePath)
-      }
+      await handleContentItem({
+        item,
+        octokit,
+        sourceOwner,
+        sourceRepoName,
+        repoOwner,
+        repoName,
+        basePath,
+      });
     }
   } catch (error) {
-    console.error('Error processing directory:', error)
-    // Continue even if one directory fails
+    console.error("Error processing directory:", error);
   }
 }
 
+async function fetchDirectoryContents(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  path: string
+) {
+  const { data } = await octokit.repos.getContent({
+    owner,
+    repo,
+    path,
+  });
+
+  return data;
+}
+
+async function handleContentItem(params: {
+  item: {
+    type?: string;
+    download_url?: string | null;
+    path: string;
+    name: string;
+  };
+  octokit: Octokit;
+  sourceOwner: string;
+  sourceRepoName: string;
+  repoOwner: string;
+  repoName: string;
+  basePath: string;
+}) {
+  if (params.item.type === "file" && params.item.download_url) {
+    await copyFileItem(params);
+    return;
+  }
+
+  if (params.item.type === "dir") {
+    await copyFilesRecursively(
+      params.octokit,
+      params.sourceOwner,
+      params.sourceRepoName,
+      params.item.path,
+      params.repoOwner,
+      params.repoName,
+      params.basePath
+    );
+  }
+}
+
+async function copyFileItem(params: {
+  item: { download_url: string; path: string; name: string };
+  octokit: Octokit;
+  repoOwner: string;
+  repoName: string;
+  basePath: string;
+}) {
+  try {
+    const response = await fetch(params.item.download_url);
+    if (!response.ok) {
+      throw new Error("Failed to fetch template file");
+    }
+
+    const content = await response.text();
+    const relativePath = getRelativePath(
+      params.item.path,
+      params.basePath,
+      params.item.name
+    );
+
+    await params.octokit.repos.createOrUpdateFileContents({
+      owner: params.repoOwner,
+      repo: params.repoName,
+      path: relativePath,
+      message: `Add ${relativePath} from template`,
+      content: Buffer.from(content).toString("base64"),
+    });
+  } catch (error) {
+    console.error("Error copying file", error);
+  }
+}
+
+function getRelativePath(path: string, basePath: string, fallbackName: string) {
+  if (!basePath) {
+    return path;
+  }
+
+  return path.startsWith(`${basePath}/`)
+    ? path.substring(basePath.length + 1)
+    : fallbackName;
+}
+
 // Helper function to copy files from template repository
-async function populateRepoFromTemplate(octokit: Octokit, repoOwner: string, repoName: string, template: RepoTemplate) {
+async function populateRepoFromTemplate(
+  octokit: Octokit,
+  repoOwner: string,
+  repoName: string,
+  template: RepoTemplate
+) {
   if (!template.cloneUrl) {
-    return
+    return;
   }
 
   // Parse clone URL to get owner and repo name
-  const cloneMatch = template.cloneUrl.match(/github\.com\/([\w-]+)\/([\w-]+?)(?:\.git)?$/)
+  const cloneMatch = /github\.com\/([\w-]+)\/([\w-]+?)(?:\.git)?$/.exec(
+    template.cloneUrl
+  );
   if (!cloneMatch) {
-    throw new Error('Invalid clone URL')
+    throw new Error("Invalid clone URL");
   }
 
-  const [, sourceOwner, sourceRepoName] = cloneMatch
+  const [, sourceOwner, sourceRepoName] = cloneMatch;
 
   try {
     // Get all files from the root of the template repository
@@ -94,159 +173,187 @@ async function populateRepoFromTemplate(octokit: Octokit, repoOwner: string, rep
       octokit,
       sourceOwner,
       sourceRepoName,
-      '', // Root path
+      "", // Root path
       repoOwner,
       repoName,
-      '', // Root path
-    )
+      "" // Root path
+    );
   } catch (error) {
-    console.error('Error populating repository from template:', error)
-    throw error
+    console.error("Error populating repository from template", error);
+    throw error;
   }
 }
 
 export async function POST(request: Request) {
   try {
-    // Get the authenticated user's session
-    const session = await getServerSession()
+    const session = await getServerSession();
 
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      throw new HttpError("Unauthorized", 401);
     }
 
-    // Get user's GitHub token
-    const token = await getUserGitHubToken()
-
+    const token = await getUserGitHubToken();
     if (!token) {
-      return NextResponse.json(
-        {
-          error: 'GitHub token not found. Please reconnect your GitHub account.',
-        },
-        { status: 401 },
-      )
+      throw new HttpError(
+        "GitHub token not found. Please reconnect your GitHub account.",
+        401
+      );
     }
 
-    // Parse request body
-    const { name, description, private: isPrivate, owner, template } = await request.json()
+    const payload = await parseCreateRepoBody(request);
+    const octokit = new Octokit({ auth: token });
+    const repo = await createRepository(octokit, payload);
 
-    if (!name || typeof name !== 'string') {
-      return NextResponse.json({ error: 'Repository name is required' }, { status: 400 })
-    }
+    await attemptTemplatePopulation(
+      octokit,
+      repo.data.owner.login,
+      repo.data.name,
+      payload.template
+    );
 
-    // Validate repository name format
-    const repoNamePattern = /^[a-zA-Z0-9._-]+$/
-    if (!repoNamePattern.test(name)) {
-      return NextResponse.json(
-        {
-          error: 'Repository name can only contain alphanumeric characters, periods, hyphens, and underscores',
-        },
-        { status: 400 },
-      )
-    }
-
-    // Initialize Octokit with user's token
-    const octokit = new Octokit({ auth: token })
-
-    try {
-      // Check if owner is an org or the user's personal account
-      let repo: {
-        data: {
-          id: number
-          full_name: string
-          html_url: string
-          name: string
-          clone_url: string
-          private: boolean
-          owner: { login: string }
-        }
-      }
-
-      if (owner) {
-        // First, check if the owner is the user's personal account
-        const { data: user } = await octokit.users.getAuthenticated()
-
-        if (user.login === owner) {
-          // Create in user's personal account
-          repo = await octokit.repos.createForAuthenticatedUser({
-            name,
-            description: description || undefined,
-            private: isPrivate || false,
-            auto_init: true, // Initialize with README
-          })
-        } else {
-          // Try to create in organization
-          try {
-            repo = await octokit.repos.createInOrg({
-              org: owner,
-              name,
-              description: description || undefined,
-              private: isPrivate || false,
-              auto_init: true, // Initialize with README
-            })
-          } catch (error: unknown) {
-            if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-              return NextResponse.json(
-                {
-                  error: 'Organization not found or you do not have permission to create repositories',
-                },
-                { status: 403 },
-              )
-            }
-            throw error
-          }
-        }
-      } else {
-        // Create in user's personal account if no owner specified
-        repo = await octokit.repos.createForAuthenticatedUser({
-          name,
-          description: description || undefined,
-          private: isPrivate || false,
-          auto_init: true, // Initialize with README
-        })
-      }
-
-      // If a template is selected, populate the repository
-      if (template) {
-        try {
-          await populateRepoFromTemplate(octokit, repo.data.owner.login, repo.data.name, template as RepoTemplate)
-        } catch (error) {
-          console.error('Error populating repository from template:', error)
-          // Don't fail the entire operation if template population fails
-          // The repository was created successfully, just without template files
-        }
-      }
-
-      return NextResponse.json({
-        success: true,
-        name: repo.data.name,
-        full_name: repo.data.full_name,
-        clone_url: repo.data.clone_url,
-        html_url: repo.data.html_url,
-        private: repo.data.private,
-      })
-    } catch (error: unknown) {
-      console.error('GitHub API error:', error)
-
-      // Handle specific GitHub API errors
-      if (error && typeof error === 'object' && 'status' in error) {
-        if (error.status === 422) {
-          return NextResponse.json({ error: 'Repository already exists or name is invalid' }, { status: 422 })
-        }
-
-        if (error.status === 403) {
-          return NextResponse.json(
-            {
-              error: 'You do not have permission to create repositories in this organization',
-            },
-            { status: 403 },
-          )
-        }
-      }
-
-      throw error
-    }
+    return NextResponse.json({
+      success: true,
+      name: repo.data.name,
+      full_name: repo.data.full_name,
+      clone_url: repo.data.clone_url,
+      html_url: repo.data.html_url,
+      private: repo.data.private,
+    });
   } catch (error) {
-    console.error('Error creating repository:', error)
-    return NextResponse.json({ error: 'Failed to create repository' }, { status: 500 })
+    const handledResponse = handleRepoCreationError(error);
+    if (handledResponse) {
+      return handledResponse;
+    }
+
+    console.error("Error creating repository", error);
+    return NextResponse.json(
+      { error: "Failed to create repository" },
+      { status: 500 }
+    );
   }
+}
+
+async function attemptTemplatePopulation(
+  octokit: Octokit,
+  repoOwner: string,
+  repoName: string,
+  template?: RepoTemplate
+) {
+  if (!template) {
+    return;
+  }
+
+  try {
+    await populateRepoFromTemplate(octokit, repoOwner, repoName, template);
+  } catch (error) {
+    console.error("Error populating repository from template", error);
+  }
+}
+
+async function parseCreateRepoBody(request: Request) {
+  const body = await request.json();
+  const { name, description, private: isPrivate, owner, template } = body;
+
+  if (!name || typeof name !== "string") {
+    throw new HttpError("Repository name is required", 400);
+  }
+
+  const repoNamePattern = /^[a-zA-Z0-9._-]+$/;
+  if (!repoNamePattern.test(name)) {
+    throw new HttpError(
+      "Repository name can only contain alphanumeric characters, periods, hyphens, and underscores",
+      400
+    );
+  }
+
+  return {
+    name,
+    description: typeof description === "string" ? description : undefined,
+    private: Boolean(isPrivate),
+    owner: typeof owner === "string" ? owner : undefined,
+    template: template as RepoTemplate | undefined,
+  };
+}
+
+async function createRepository(
+  octokit: Octokit,
+  payload: Awaited<ReturnType<typeof parseCreateRepoBody>>
+) {
+  const repoDescription = payload.description || undefined;
+  const isPrivate = payload.private || false;
+
+  if (!payload.owner) {
+    return octokit.repos.createForAuthenticatedUser({
+      name: payload.name,
+      description: repoDescription,
+      private: isPrivate,
+      auto_init: true,
+    });
+  }
+
+  const { data: user } = await octokit.users.getAuthenticated();
+  if (user.login === payload.owner) {
+    return octokit.repos.createForAuthenticatedUser({
+      name: payload.name,
+      description: repoDescription,
+      private: isPrivate,
+      auto_init: true,
+    });
+  }
+
+  try {
+    return await octokit.repos.createInOrg({
+      org: payload.owner,
+      name: payload.name,
+      description: repoDescription,
+      private: isPrivate,
+      auto_init: true,
+    });
+  } catch (error) {
+    if (isGitHubError(error, 404)) {
+      throw new HttpError(
+        "Organization not found or you do not have permission to create repositories",
+        403
+      );
+    }
+
+    throw error;
+  }
+}
+
+function handleRepoCreationError(error: unknown) {
+  if (error instanceof HttpError) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: error.status }
+    );
+  }
+
+  if (isGitHubError(error, 422)) {
+    return NextResponse.json(
+      { error: "Repository already exists or name is invalid" },
+      { status: 422 }
+    );
+  }
+
+  if (isGitHubError(error, 403)) {
+    return NextResponse.json(
+      {
+        error:
+          "You do not have permission to create repositories in this organization",
+      },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}
+
+function isGitHubError(error: unknown, status: number) {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "status" in error &&
+      (error as { status: number }).status === status
+  );
 }
