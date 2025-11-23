@@ -1,3 +1,5 @@
+/** @format */
+
 import { getUserGitHubToken } from '@/lib/github/user-token'
 import { getServerSession } from '@/lib/session/get-server-session'
 import { Octokit } from '@octokit/rest'
@@ -117,7 +119,9 @@ export async function POST(request: Request) {
 
     if (!token) {
       return NextResponse.json(
-        { error: 'GitHub token not found. Please reconnect your GitHub account.' },
+        {
+          error: 'GitHub token not found. Please reconnect your GitHub account.',
+        },
         { status: 401 },
       )
     }
@@ -133,7 +137,9 @@ export async function POST(request: Request) {
     const repoNamePattern = /^[a-zA-Z0-9._-]+$/
     if (!repoNamePattern.test(name)) {
       return NextResponse.json(
-        { error: 'Repository name can only contain alphanumeric characters, periods, hyphens, and underscores' },
+        {
+          error: 'Repository name can only contain alphanumeric characters, periods, hyphens, and underscores',
+        },
         { status: 400 },
       )
     }
@@ -180,7 +186,9 @@ export async function POST(request: Request) {
           } catch (error: unknown) {
             if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
               return NextResponse.json(
-                { error: 'Organization not found or you do not have permission to create repositories' },
+                {
+                  error: 'Organization not found or you do not have permission to create repositories',
+                },
                 { status: 403 },
               )
             }
@@ -227,7 +235,9 @@ export async function POST(request: Request) {
 
         if (error.status === 403) {
           return NextResponse.json(
-            { error: 'You do not have permission to create repositories in this organization' },
+            {
+              error: 'You do not have permission to create repositories in this organization',
+            },
             { status: 403 },
           )
         }
