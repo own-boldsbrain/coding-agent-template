@@ -9,6 +9,14 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }))
 
+// Mock atoms
+vi.mock('@/lib/atoms/github-cache', async () => {
+  const { atom } = await import('jotai')
+  return {
+    githubReposAtomFamily: () => atom([]),
+  }
+})
+
 // Mock lucide-react
 vi.mock('lucide-react', () => ({
   Loader2: () => <div data-testid="loader-icon">Loader2</div>,
@@ -71,22 +79,55 @@ vi.mock('@/components/connectors-provider', () => ({
 // Mock UI components to simplify testing
 vi.mock('@/components/ui/button', () => ({
   Button: ({ children, onClick, disabled, className, type }: any) => (
-    <button onClick={onClick} disabled={disabled} className={className} type={type} data-testid="submit-button">
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      type={type || 'button'}
+      data-testid={type === 'submit' ? 'actual-submit-button' : 'other-button'}
+    >
       {children}
     </button>
   ),
 }))
 
-vi.mock('@/components/ui/textarea', () => ({
-  Textarea: ({ value, onChange, placeholder, onKeyDown }: any) => (
-    <textarea
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      onKeyDown={onKeyDown}
-      data-testid="task-textarea"
-    />
-  ),
+vi.mock('@/components/ui/textarea', async () => {
+  const React = await import('react')
+  return {
+    Textarea: React.forwardRef(({ value, onChange, placeholder, onKeyDown }: any, ref: any) => (
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        onKeyDown={onKeyDown}
+        data-testid="task-textarea"
+      />
+    )),
+  }
+})
+
+vi.mock('@/components/ui/select', () => ({
+  Select: ({ children }: any) => <div>{children}</div>,
+  SelectContent: ({ children }: any) => <div>{children}</div>,
+  SelectItem: ({ children, value }: any) => <div data-value={value}>{children}</div>,
+  SelectTrigger: ({ children }: any) => <button>{children}</button>,
+  SelectValue: ({ children }: any) => <span>{children}</span>,
+}))
+
+vi.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuLabel: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
+  DropdownMenuTrigger: ({ children }: any) => <button>{children}</button>,
+}))
+
+vi.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: any) => <div>{children}</div>,
+  TooltipContent: ({ children }: any) => <div>{children}</div>,
+  TooltipProvider: ({ children }: any) => <div>{children}</div>,
+  TooltipTrigger: ({ children }: any) => <button>{children}</button>,
 }))
 
 describe('TaskForm', () => {
@@ -155,7 +196,7 @@ describe('TaskForm', () => {
     const textarea = screen.getByTestId('task-textarea')
     fireEvent.change(textarea, { target: { value: 'Do something' } })
 
-    const submitButton = screen.getByTestId('submit-button')
+    const submitButton = screen.getByTestId('actual-submit-button')
     fireEvent.click(submitButton)
 
     await waitFor(() => {
@@ -164,13 +205,14 @@ describe('TaskForm', () => {
   })
 
   it('should disable submit button when isSubmitting is true', () => {
+    console.log('Running updated test')
     render(
       <Provider>
         <TaskForm {...defaultProps} isSubmitting={true} />
       </Provider>,
     )
 
-    const submitButton = screen.getByTestId('submit-button') as HTMLButtonElement
+    const submitButton = screen.getByTestId('actual-submit-button') as HTMLButtonElement
     expect(submitButton.disabled).toBe(true)
     expect(screen.getByTestId('loader-icon')).not.toBeNull()
   })
