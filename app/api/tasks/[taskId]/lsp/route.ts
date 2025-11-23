@@ -1,96 +1,194 @@
-import { db } from '@/lib/db/client'
-import { tasks } from '@/lib/db/schema'
-import { getSandbox } from '@/lib/sandbox/sandbox-registry'
-import { getServerSession } from '@/lib/session/get-server-session'
-import { eq } from 'drizzle-orm'
-import { type NextRequest, NextResponse } from 'next/server'
+/** @format */
 
-export const runtime = 'nodejs'
-export const maxDuration = 60
+import { PROJECT_DIR } from "@/lib/sandbox/commands";
+import { type NextRequest, NextResponse } from "next/server";
+import {
+  TaskRouteError,
+  buildTaskRouteContext,
+  getActiveSandbox,
+  handleTaskRouteError,
+  type TaskRouteContext,
+} from "../task-route-helpers";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 /**
  * POST /api/tasks/[taskId]/lsp
  * Handles LSP requests by executing TypeScript language service queries in the sandbox
  */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ taskId: string }> }
+) {
   try {
-    const session = await getServerSession()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const context = await buildTaskRouteContext({ params });
+    const sandbox = await resolveSandbox(context);
+    const body = await parseRequestBody(request);
+    const handler = lspHandlers[body.method as LspMethod];
+
+    if (!handler) {
+      throw new TaskRouteError("Unsupported LSP method", 400);
     }
 
-    const { taskId } = await params
+    return await handler({ sandbox, body });
+  } catch (error) {
+    return handleTaskRouteError(error, "Failed to process LSP request", {
+      400: "Task does not have an active sandbox",
+      410: "Sandbox is not running",
+    });
+  }
+}
 
-    // Verify task belongs to user
-    const task = await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, taskId))
-      .limit(1)
-      .then((rows) => rows[0])
+type ActiveSandbox = Awaited<ReturnType<typeof getActiveSandbox>>;
+type LspMethod =
+  | "textDocument/definition"
+  | "textDocument/hover"
+  | "textDocument/completion";
 
-    if (!task || task.userId !== session.user.id) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+interface LspRequestBody {
+  method: string;
+  filename?: string;
+  position?: { line: number; character: number };
+  textDocument?: unknown;
+}
+
+interface LspHandlerContext {
+  sandbox: ActiveSandbox;
+  body: LspRequestBody;
+}
+
+type LspHandler = (context: LspHandlerContext) => Promise<NextResponse>;
+
+const lspHandlers: Record<LspMethod, LspHandler> = {
+  "textDocument/definition": handleDefinitionRequest,
+  "textDocument/hover": async () => NextResponse.json({ hover: null }),
+  "textDocument/completion": async () => NextResponse.json({ completions: [] }),
+};
+
+async function resolveSandbox(context: TaskRouteContext) {
+  const { task } = context;
+
+  if (!task.sandboxId) {
+    throw new TaskRouteError("Task does not have an active sandbox", 400);
+  }
+
+  return getActiveSandbox(task.id, task.sandboxId);
+}
+
+async function parseRequestBody(request: NextRequest): Promise<LspRequestBody> {
+  try {
+    const body = await request.json();
+    return typeof body === "object" && body ? body : { method: "" };
+  } catch {
+    return { method: "" };
+  }
+}
+
+async function handleDefinitionRequest({ sandbox, body }: LspHandlerContext) {
+  if (!body.filename || !body.position) {
+    throw new TaskRouteError("Filename and position are required", 400);
+  }
+
+  const absoluteFilename = toAbsolutePath(body.filename);
+  const scriptPath = ".lsp-helper.mjs";
+  const helperScript = buildDefinitionHelperScript(
+    absoluteFilename,
+    body.position.line,
+    body.position.character
+  );
+
+  await writeHelperScript(sandbox, scriptPath, helperScript);
+
+  try {
+    const result = await sandbox.runCommand({
+      cmd: "node",
+      args: [scriptPath],
+      cwd: PROJECT_DIR,
+    });
+
+    const { stdout, stderr } = await collectCommandOutput(result);
+
+    if (result.exitCode !== 0) {
+      console.error("LSP helper execution failed", stderr);
+      return NextResponse.json({
+        definitions: [],
+        error: stderr || "Script execution failed",
+      });
     }
 
-    // Check if task has a sandbox
-    if (!task.sandboxId) {
-      return NextResponse.json({ error: 'Task does not have an active sandbox' }, { status: 400 })
+    try {
+      const parsed = JSON.parse(stdout.trim());
+      return NextResponse.json(parsed);
+    } catch (parseError) {
+      console.error("Failed to parse LSP helper output", parseError);
+      return NextResponse.json({
+        definitions: [],
+        error: "Failed to parse TypeScript response",
+      });
     }
+  } finally {
+    await sandbox
+      .runCommand({ cmd: "rm", args: ["-f", scriptPath], cwd: PROJECT_DIR })
+      .catch((error) =>
+        console.error("Failed to clean up LSP helper script", error)
+      );
+  }
+}
 
-    // Try to get sandbox from registry first (keyed by taskId, not sandboxId)
-    let sandbox = getSandbox(taskId)
+async function writeHelperScript(
+  sandbox: ActiveSandbox,
+  scriptPath: string,
+  contents: string
+) {
+  const writeCommand = `cat > '${scriptPath}' << 'EOF'\n${contents}\nEOF`;
+  await sandbox.runCommand({
+    cmd: "sh",
+    args: ["-c", writeCommand],
+    cwd: PROJECT_DIR,
+  });
+}
 
-    // If not in registry, try to reconnect using sandboxId from database
-    if (!sandbox) {
-      try {
-        const sandboxToken = process.env.SANDBOX_VERCEL_TOKEN
-        const teamId = process.env.SANDBOX_VERCEL_TEAM_ID
-        const projectId = process.env.SANDBOX_VERCEL_PROJECT_ID
+async function collectCommandOutput(
+  result: Awaited<ReturnType<ActiveSandbox["runCommand"]>>
+) {
+  let stdout = "";
+  let stderr = "";
 
-        if (!sandboxToken || !teamId || !projectId) {
-          return NextResponse.json({ error: 'Sandbox credentials not configured' }, { status: 500 })
-        }
+  try {
+    stdout = await result.stdout();
+  } catch (error) {
+    console.error("Failed to read LSP stdout", error);
+  }
 
-        const { Sandbox } = await import('@vercel/sandbox')
-        sandbox = await Sandbox.get({
-          sandboxId: task.sandboxId,
-          teamId,
-          projectId,
-          token: sandboxToken,
-        })
-      } catch (error) {
-        console.error('Failed to reconnect to sandbox:', error)
-        return NextResponse.json({ error: 'Failed to connect to sandbox' }, { status: 500 })
-      }
-    }
+  try {
+    stderr = await result.stderr();
+  } catch (error) {
+    console.error("Failed to read LSP stderr", error);
+  }
 
-    if (!sandbox) {
-      return NextResponse.json({ error: 'Sandbox not available' }, { status: 400 })
-    }
+  return { stdout, stderr };
+}
 
-    const body = await request.json()
-    const { method, filename, position, textDocument } = body
+function toAbsolutePath(filename: string) {
+  return filename.startsWith("/") ? filename : `/${filename}`;
+}
 
-    // Normalize filename to absolute path
-    const absoluteFilename = filename.startsWith('/') ? filename : `/${filename}`
-
-    switch (method) {
-      case 'textDocument/definition': {
-        // Execute TypeScript language service query in sandbox
-        const scriptPath = '.lsp-helper.mjs'
-
-        // Create LSP helper script in sandbox (pure JavaScript, no TypeScript syntax)
-        const helperScript = `
+function buildDefinitionHelperScript(
+  filename: string,
+  line: number,
+  character: number
+) {
+  const filenameLiteral = JSON.stringify(filename);
+  return `
 import ts from 'typescript';
 import fs from 'fs';
 import path from 'path';
 
-const filename = '${absoluteFilename.replace(/'/g, "\\'")}';
-const line = ${position.line};
-const character = ${position.character};
+const filename = ${filenameLiteral};
+const line = ${line};
+const character = ${character};
 
-// Find tsconfig.json
 let configPath = process.cwd();
 while (configPath !== '/') {
   const tsconfigPath = path.join(configPath, 'tsconfig.json');
@@ -108,7 +206,6 @@ const parsedConfig = ts.parseJsonConfigFileContent(
   configPath
 );
 
-// Create language service host
 const files = new Map();
 const host = {
   getScriptFileNames: () => parsedConfig.fileNames,
@@ -131,10 +228,8 @@ const host = {
   getDirectories: ts.sys.getDirectories,
 };
 
-// Create language service
 const service = ts.createLanguageService(host, ts.createDocumentRegistry());
 
-// Get definitions
 const fullPath = path.resolve(configPath, filename.replace(/^\\/*/g, ''));
 const program = service.getProgram();
 if (!program) {
@@ -144,7 +239,7 @@ if (!program) {
 
 const sourceFile = program.getSourceFile(fullPath);
 if (!sourceFile) {
-  console.error(JSON.stringify({ error: 'File not found', filename: fullPath }));
+  console.error(JSON.stringify({ error: 'File not found' }));
   process.exit(1);
 }
 
@@ -164,72 +259,15 @@ if (definitions && definitions.length > 0) {
     return {
       uri: 'file://' + def.fileName,
       range: {
-        start: start,
-        end: end,
+        start,
+        end,
       },
     };
-  }).filter(def => def !== null);
+  }).filter(Boolean);
   
   console.log(JSON.stringify({ definitions: results }));
 } else {
   console.log(JSON.stringify({ definitions: [] }));
 }
-`
-
-        // Write helper script to sandbox
-        const writeCommand = `cat > '${scriptPath}' << 'EOF'\n${helperScript}\nEOF`
-        await sandbox.runCommand('sh', ['-c', writeCommand])
-
-        // Execute the script
-        const result = await sandbox.runCommand('node', [scriptPath])
-
-        // Read stdout and stderr
-        let stdout = ''
-        let stderr = ''
-        try {
-          stdout = await result.stdout()
-        } catch (e) {
-          console.error('Failed to read LSP stdout:', e)
-        }
-        try {
-          stderr = await result.stderr()
-        } catch (e) {
-          console.error('Failed to read LSP stderr:', e)
-        }
-
-        // Clean up
-        await sandbox.runCommand('rm', [scriptPath])
-
-        // Parse the result
-        if (result.exitCode !== 0) {
-          console.error('LSP script failed:', stderr)
-          return NextResponse.json({ definitions: [], error: stderr || 'Script execution failed' })
-        }
-
-        try {
-          const parsed = JSON.parse(stdout.trim())
-          return NextResponse.json(parsed)
-        } catch (parseError) {
-          console.error('Failed to parse LSP result:', parseError)
-          return NextResponse.json({ definitions: [], error: 'Failed to parse TypeScript response' })
-        }
-      }
-
-      case 'textDocument/hover': {
-        // Similar implementation for hover
-        return NextResponse.json({ hover: null })
-      }
-
-      case 'textDocument/completion': {
-        // Similar implementation for completion
-        return NextResponse.json({ completions: [] })
-      }
-
-      default:
-        return NextResponse.json({ error: 'Unsupported LSP method' }, { status: 400 })
-    }
-  } catch (error) {
-    console.error('LSP request error:', error)
-    return NextResponse.json({ error: 'Failed to process LSP request' }, { status: 500 })
-  }
+`;
 }
