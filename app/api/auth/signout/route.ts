@@ -27,8 +27,9 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  const next = req.nextUrl.searchParams.get('next') ?? '/'
   const response = Response.json({
-    url: isRelativeUrl(req.nextUrl.searchParams.get('next') ?? '/') ? req.nextUrl.searchParams.get('next') : '/',
+    url: isRelativeUrl(next) ? next : '/',
   })
 
   await saveSession(response, undefined)

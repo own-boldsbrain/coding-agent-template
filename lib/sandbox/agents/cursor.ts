@@ -7,6 +7,7 @@ import { TaskLogger } from '@/lib/utils/task-logger'
 import { connectors, taskMessages } from '@/lib/db/schema'
 import { db } from '@/lib/db/client'
 import { eq } from 'drizzle-orm'
+import { CursorOutputParser } from './cursor-parser'
 import { generateId } from '@/lib/utils/id'
 
 type Connector = typeof connectors.$inferSelect
@@ -320,6 +321,7 @@ EOF`
 
     let accumulatedContent = ''
     let extractedSessionId: string | undefined
+    const parser = new CursorOutputParser()
 
     const captureStdout = new Writable({
       write(chunk: Buffer | string, encoding: BufferEncoding, callback: WriteCallback) {
@@ -331,85 +333,20 @@ EOF`
           capturedOutput += data
         }
 
-        // Parse streaming JSON chunks - always do this to extract session_id
-        const lines = data.split('\n')
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              const parsed = JSON.parse(line)
+        // Parse streaming JSON chunks
+        const result = parser.processChunk(data)
 
-              // Always extract session_id from result
-              if (parsed.type === 'result' && parsed.session_id) {
-                extractedSessionId = parsed.session_id
-              }
+        if (result.sessionId) {
+          extractedSessionId = result.sessionId
+        }
 
-              // Only update database if streaming to taskId
-              if (agentMessageId && taskId) {
-                // Handle different chunk types from Cursor's stream-json format
-                if (parsed.type === 'tool_call') {
-                  // Show tool execution status
-                  if (parsed.subtype === 'started') {
-                    const toolName = Object.keys(parsed.tool_call || {})[0]
-                    let statusMsg = ''
+        if (agentMessageId && taskId && result.content) {
+          accumulatedContent += result.content
 
-                    if (toolName === 'editToolCall') {
-                      const path = parsed.tool_call?.editToolCall?.args?.path || 'file'
-                      statusMsg = `\n\nEditing ${path}`
-                    } else if (toolName === 'readToolCall') {
-                      const path = parsed.tool_call?.readToolCall?.args?.path || 'file'
-                      statusMsg = `\n\nReading ${path}`
-                    } else if (toolName === 'runCommandToolCall') {
-                      statusMsg = `\n\nRunning command`
-                    } else if (toolName === 'listDirectoryToolCall') {
-                      statusMsg = `\n\nListing directory`
-                    } else if (toolName === 'shellToolCall') {
-                      // Extract command from shell tool call
-                      const command = parsed.tool_call?.shellToolCall?.args?.command || 'command'
-                      statusMsg = `\n\nRunning: ${command}`
-                    } else if (toolName === 'grepToolCall') {
-                      const pattern = parsed.tool_call?.grepToolCall?.args?.pattern || 'pattern'
-                      statusMsg = `\n\nSearching for: ${pattern}`
-                    } else if (toolName === 'semSearchToolCall') {
-                      const query = parsed.tool_call?.semSearchToolCall?.args?.query || 'code'
-                      statusMsg = `\n\nSearching codebase: ${query}`
-                    } else if (toolName === 'globToolCall') {
-                      const pattern = parsed.tool_call?.globToolCall?.args?.glob_pattern || 'files'
-                      statusMsg = `\n\nFinding files: ${pattern}`
-                    } else {
-                      // For any other tool calls, show a generic message without the "ToolCall" suffix
-                      const cleanToolName = toolName.replace(/ToolCall$/, '')
-                      statusMsg = `\n\nExecuting ${cleanToolName}`
-                    }
-
-                    if (statusMsg) {
-                      accumulatedContent += statusMsg
-                      db.update(taskMessages)
-                        .set({ content: accumulatedContent })
-                        .where(eq(taskMessages.id, agentMessageId))
-                        .catch((err: Error) => console.error('Failed to update message:', err))
-                    }
-                  }
-                } else if (parsed.type === 'assistant' && parsed.message?.content) {
-                  // Extract text from assistant message content array
-                  const textContent = parsed.message.content
-                    .filter((item: { type: string; text?: string }) => item.type === 'text')
-                    .map((item: { text?: string }) => item.text)
-                    .join('')
-
-                  if (textContent) {
-                    accumulatedContent += '\n\n' + textContent
-                    // Update message in database (non-blocking)
-                    db.update(taskMessages)
-                      .set({ content: accumulatedContent })
-                      .where(eq(taskMessages.id, agentMessageId))
-                      .catch((err: Error) => console.error('Failed to update message:', err))
-                  }
-                }
-              }
-            } catch {
-              // Ignore JSON parse errors for non-JSON lines
-            }
-          }
+          db.update(taskMessages)
+            .set({ content: accumulatedContent })
+            .where(eq(taskMessages.id, agentMessageId))
+            .catch((err: Error) => console.error('Failed to update message:', err))
         }
 
         // Check if we got the completion JSON

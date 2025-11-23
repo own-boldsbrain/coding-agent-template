@@ -8,6 +8,7 @@ import { connectors, taskMessages } from '@/lib/db/schema'
 import { db } from '@/lib/db/client'
 import { eq } from 'drizzle-orm'
 import { generateId } from '@/lib/utils/id'
+import { CopilotOutputParser } from './copilot-parser'
 
 type Connector = typeof connectors.$inferSelect
 
@@ -200,6 +201,7 @@ EOF`
     }
 
     let extractedSessionId: string | undefined
+    const parser = new CopilotOutputParser()
 
     const captureStdout = new Writable({
       write(chunk: Buffer | string, encoding: BufferEncoding, callback: WriteCallback) {
@@ -211,37 +213,19 @@ EOF`
         }
 
         // Parse text-based streaming output with --no-color
-        // GitHub Copilot CLI outputs lines with different prefixes:
-        // ● = thought/status, ✓ = completed action, $ = command, ╭─ = diff start, etc.
-        // Filter out the diff boxes (lines containing ╭, ╰, │, ─, ═) to keep output clean
         if (agentMessageId && taskId) {
-          const lines = data.split('\n')
-          for (const line of lines) {
-            if (line.trim()) {
-              // Skip diff box lines (containing box drawing characters)
-              const isDiffBox = /[╭╰│─═╮╯]/.test(line)
+          const processedChunk = parser.processChunk(data)
 
-              if (!isDiffBox) {
-                // Check if this is a new action line (starts with ● or ✓)
-                const isActionLine = /^[●✓]/.test(line.trim())
+          if (processedChunk) {
+            accumulatedContent += processedChunk
 
-                // Add blank line before action lines for better readability
-                if (isActionLine && accumulatedContent.length > 0) {
-                  accumulatedContent += '\n'
-                }
-
-                // Append each line to accumulated content
-                accumulatedContent += line + '\n'
-
-                // Update database with accumulated content (throttled via catch)
-                db.update(taskMessages)
-                  .set({ content: accumulatedContent })
-                  .where(eq(taskMessages.id, agentMessageId))
-                  .catch((err: Error) => {
-                    // Silently ignore update errors to avoid flooding logs
-                  })
-              }
-            }
+            // Update database with accumulated content (throttled via catch)
+            db.update(taskMessages)
+              .set({ content: accumulatedContent })
+              .where(eq(taskMessages.id, agentMessageId))
+              .catch((err: Error) => {
+                // Silently ignore update errors to avoid flooding logs
+              })
           }
         }
 
