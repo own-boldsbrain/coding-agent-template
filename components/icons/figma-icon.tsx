@@ -1,7 +1,8 @@
 import type { SVGProps } from 'react'
 
 const FigmaIcon = (props: SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" {...props}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" aria-labelledby="figma-icon-title" {...props}>
+    <title id="figma-icon-title">Figma</title>
     <path
       stroke="currentColor"
       strokeLinecap="round"
