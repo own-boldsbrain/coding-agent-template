@@ -7,4 +7,4 @@
  * Keeping this placeholder avoids reintroducing the script unintentionally while also
  * documenting why the file name exists in history.
  */
-export const manualSandboxTestScriptRemoved = true;
+export const manualSandboxTestScriptRemoved = true

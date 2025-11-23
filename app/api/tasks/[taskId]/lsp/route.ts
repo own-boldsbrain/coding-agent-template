@@ -1,185 +1,163 @@
 /** @format */
 
-import { PROJECT_DIR } from "@/lib/sandbox/commands";
-import { type NextRequest, NextResponse } from "next/server";
+import { PROJECT_DIR } from '@/lib/sandbox/commands'
+import { type NextRequest, NextResponse } from 'next/server'
 import {
   TaskRouteError,
   buildTaskRouteContext,
   getActiveSandbox,
   handleTaskRouteError,
   type TaskRouteContext,
-} from "../task-route-helpers";
+} from '../task-route-helpers'
 
-export const runtime = "nodejs";
-export const maxDuration = 60;
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 /**
  * POST /api/tasks/[taskId]/lsp
  * Handles LSP requests by executing TypeScript language service queries in the sandbox
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ taskId: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
   try {
-    const context = await buildTaskRouteContext({ params });
-    const sandbox = await resolveSandbox(context);
-    const body = await parseRequestBody(request);
-    const handler = lspHandlers[body.method as LspMethod];
+    const context = await buildTaskRouteContext({ params })
+    const sandbox = await resolveSandbox(context)
+    const body = await parseRequestBody(request)
+    const handler = lspHandlers[body.method as LspMethod]
 
     if (!handler) {
-      throw new TaskRouteError("Unsupported LSP method", 400);
+      throw new TaskRouteError('Unsupported LSP method', 400)
     }
 
-    return await handler({ sandbox, body });
+    return await handler({ sandbox, body })
   } catch (error) {
-    return handleTaskRouteError(error, "Failed to process LSP request", {
-      400: "Task does not have an active sandbox",
-      410: "Sandbox is not running",
-    });
+    return handleTaskRouteError(error, 'Failed to process LSP request', {
+      400: 'Task does not have an active sandbox',
+      410: 'Sandbox is not running',
+    })
   }
 }
 
-type ActiveSandbox = Awaited<ReturnType<typeof getActiveSandbox>>;
-type LspMethod =
-  | "textDocument/definition"
-  | "textDocument/hover"
-  | "textDocument/completion";
+type ActiveSandbox = Awaited<ReturnType<typeof getActiveSandbox>>
+type LspMethod = 'textDocument/definition' | 'textDocument/hover' | 'textDocument/completion'
 
 interface LspRequestBody {
-  method: string;
-  filename?: string;
-  position?: { line: number; character: number };
-  textDocument?: unknown;
+  method: string
+  filename?: string
+  position?: { line: number; character: number }
+  textDocument?: unknown
 }
 
 interface LspHandlerContext {
-  sandbox: ActiveSandbox;
-  body: LspRequestBody;
+  sandbox: ActiveSandbox
+  body: LspRequestBody
 }
 
-type LspHandler = (context: LspHandlerContext) => Promise<NextResponse>;
+type LspHandler = (context: LspHandlerContext) => Promise<NextResponse>
 
 const lspHandlers: Record<LspMethod, LspHandler> = {
-  "textDocument/definition": handleDefinitionRequest,
-  "textDocument/hover": async () => NextResponse.json({ hover: null }),
-  "textDocument/completion": async () => NextResponse.json({ completions: [] }),
-};
+  'textDocument/definition': handleDefinitionRequest,
+  'textDocument/hover': async () => NextResponse.json({ hover: null }),
+  'textDocument/completion': async () => NextResponse.json({ completions: [] }),
+}
 
 async function resolveSandbox(context: TaskRouteContext) {
-  const { task } = context;
+  const { task } = context
 
   if (!task.sandboxId) {
-    throw new TaskRouteError("Task does not have an active sandbox", 400);
+    throw new TaskRouteError('Task does not have an active sandbox', 400)
   }
 
-  return getActiveSandbox(task.id, task.sandboxId);
+  return getActiveSandbox(task.id, task.sandboxId)
 }
 
 async function parseRequestBody(request: NextRequest): Promise<LspRequestBody> {
   try {
-    const body = await request.json();
-    return typeof body === "object" && body ? body : { method: "" };
+    const body = await request.json()
+    return typeof body === 'object' && body ? body : { method: '' }
   } catch {
-    return { method: "" };
+    return { method: '' }
   }
 }
 
 async function handleDefinitionRequest({ sandbox, body }: LspHandlerContext) {
   if (!body.filename || !body.position) {
-    throw new TaskRouteError("Filename and position are required", 400);
+    throw new TaskRouteError('Filename and position are required', 400)
   }
 
-  const absoluteFilename = toAbsolutePath(body.filename);
-  const scriptPath = ".lsp-helper.mjs";
-  const helperScript = buildDefinitionHelperScript(
-    absoluteFilename,
-    body.position.line,
-    body.position.character
-  );
+  const absoluteFilename = toAbsolutePath(body.filename)
+  const scriptPath = '.lsp-helper.mjs'
+  const helperScript = buildDefinitionHelperScript(absoluteFilename, body.position.line, body.position.character)
 
-  await writeHelperScript(sandbox, scriptPath, helperScript);
+  await writeHelperScript(sandbox, scriptPath, helperScript)
 
   try {
     const result = await sandbox.runCommand({
-      cmd: "node",
+      cmd: 'node',
       args: [scriptPath],
       cwd: PROJECT_DIR,
-    });
+    })
 
-    const { stdout, stderr } = await collectCommandOutput(result);
+    const { stdout, stderr } = await collectCommandOutput(result)
 
     if (result.exitCode !== 0) {
-      console.error("LSP helper execution failed", stderr);
+      console.error('LSP helper execution failed', stderr)
       return NextResponse.json({
         definitions: [],
-        error: stderr || "Script execution failed",
-      });
+        error: stderr || 'Script execution failed',
+      })
     }
 
     try {
-      const parsed = JSON.parse(stdout.trim());
-      return NextResponse.json(parsed);
+      const parsed = JSON.parse(stdout.trim())
+      return NextResponse.json(parsed)
     } catch (parseError) {
-      console.error("Failed to parse LSP helper output", parseError);
+      console.error('Failed to parse LSP helper output', parseError)
       return NextResponse.json({
         definitions: [],
-        error: "Failed to parse TypeScript response",
-      });
+        error: 'Failed to parse TypeScript response',
+      })
     }
   } finally {
     await sandbox
-      .runCommand({ cmd: "rm", args: ["-f", scriptPath], cwd: PROJECT_DIR })
-      .catch((error) =>
-        console.error("Failed to clean up LSP helper script", error)
-      );
+      .runCommand({ cmd: 'rm', args: ['-f', scriptPath], cwd: PROJECT_DIR })
+      .catch((error) => console.error('Failed to clean up LSP helper script', error))
   }
 }
 
-async function writeHelperScript(
-  sandbox: ActiveSandbox,
-  scriptPath: string,
-  contents: string
-) {
-  const writeCommand = `cat > '${scriptPath}' << 'EOF'\n${contents}\nEOF`;
+async function writeHelperScript(sandbox: ActiveSandbox, scriptPath: string, contents: string) {
+  const writeCommand = `cat > '${scriptPath}' << 'EOF'\n${contents}\nEOF`
   await sandbox.runCommand({
-    cmd: "sh",
-    args: ["-c", writeCommand],
+    cmd: 'sh',
+    args: ['-c', writeCommand],
     cwd: PROJECT_DIR,
-  });
+  })
 }
 
-async function collectCommandOutput(
-  result: Awaited<ReturnType<ActiveSandbox["runCommand"]>>
-) {
-  let stdout = "";
-  let stderr = "";
+async function collectCommandOutput(result: Awaited<ReturnType<ActiveSandbox['runCommand']>>) {
+  let stdout = ''
+  let stderr = ''
 
   try {
-    stdout = await result.stdout();
+    stdout = await result.stdout()
   } catch (error) {
-    console.error("Failed to read LSP stdout", error);
+    console.error('Failed to read LSP stdout', error)
   }
 
   try {
-    stderr = await result.stderr();
+    stderr = await result.stderr()
   } catch (error) {
-    console.error("Failed to read LSP stderr", error);
+    console.error('Failed to read LSP stderr', error)
   }
 
-  return { stdout, stderr };
+  return { stdout, stderr }
 }
 
 function toAbsolutePath(filename: string) {
-  return filename.startsWith("/") ? filename : `/${filename}`;
+  return filename.startsWith('/') ? filename : `/${filename}`
 }
 
-function buildDefinitionHelperScript(
-  filename: string,
-  line: number,
-  character: number
-) {
-  const filenameLiteral = JSON.stringify(filename);
+function buildDefinitionHelperScript(filename: string, line: number, character: number) {
+  const filenameLiteral = JSON.stringify(filename)
   return `
 import ts from 'typescript';
 import fs from 'fs';
@@ -269,5 +247,5 @@ if (definitions && definitions.length > 0) {
 } else {
   console.log(JSON.stringify({ definitions: [] }));
 }
-`;
+`
 }
