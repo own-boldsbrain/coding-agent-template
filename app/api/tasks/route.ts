@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server'
-import { Sandbox } from '@vercel/sandbox'
+import { Sandbox } from '@/lib/sandbox'
 import { db } from '@/lib/db/client'
 import { tasks, insertTaskSchema, connectors, taskMessages } from '@/lib/db/schema'
 import { generateId } from '@/lib/utils/id'

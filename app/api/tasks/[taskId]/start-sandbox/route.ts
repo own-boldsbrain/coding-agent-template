@@ -3,7 +3,7 @@ import { Writable } from 'node:stream'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { Sandbox } from '@vercel/sandbox'
+import { Sandbox } from '@/lib/sandbox'
 import { getServerSession } from '@/lib/session/get-server-session'
 import { getGitHubUser } from '@/lib/github/client'
 import { getUserGitHubToken } from '@/lib/github/user-token'
@@ -48,9 +48,6 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       try {
         const existingSandbox = await Sandbox.get({
           sandboxId: task.sandboxId,
-          teamId: process.env.SANDBOX_VERCEL_TEAM_ID!,
-          projectId: process.env.SANDBOX_VERCEL_PROJECT_ID!,
-          token: process.env.SANDBOX_VERCEL_TOKEN!,
         })
 
         // Try a simple command to verify it's accessible
@@ -93,9 +90,6 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
 
     // Create a new sandbox by cloning the repo
     const sandbox = await Sandbox.create({
-      teamId: process.env.SANDBOX_VERCEL_TEAM_ID!,
-      projectId: process.env.SANDBOX_VERCEL_PROJECT_ID!,
-      token: process.env.SANDBOX_VERCEL_TOKEN!,
       source: authenticatedRepoUrl
         ? {
             type: 'git' as const,
@@ -108,6 +102,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       ports: [port],
       runtime: 'node22',
       resources: { vcpus: 4 },
+      taskId,
     })
 
     const sandboxId = sandbox?.sandboxId

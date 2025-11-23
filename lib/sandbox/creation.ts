@@ -1,4 +1,4 @@
-import { Sandbox } from '@vercel/sandbox'
+import { Sandbox } from './index'
 import { Writable } from 'node:stream'
 import { validateEnvironmentVariables, createAuthenticatedRepoUrl } from './config'
 import { runCommandInSandbox, runInProject, PROJECT_DIR } from './commands'

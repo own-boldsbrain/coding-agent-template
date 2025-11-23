@@ -1,10 +1,4 @@
-import nextPlugin from 'eslint-config-next'
+/** @format */
 
-const eslintConfig = [
-  {
-    ignores: ['node_modules/**', '.next/**', 'out/**', 'build/**', 'next-env.d.ts'],
-  },
-  ...nextPlugin,
-]
-
-export default eslintConfig
+// ESLint foi desativado em favor do Biome. O arquivo é mantido apenas para evitar auto-detecções.
+export default []

@@ -1,4 +1,4 @@
-import { Sandbox } from '@vercel/sandbox'
+import { Sandbox } from '../index'
 import { AgentExecutionResult } from '../types'
 import { executeClaudeInSandbox } from './claude'
 import { executeCodexInSandbox } from './codex'

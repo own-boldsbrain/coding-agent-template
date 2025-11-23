@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import * as schema from '@/lib/db/schema'
 import { eq, and, isNull } from 'drizzle-orm'
-import { Sandbox } from '@vercel/sandbox'
-import { getSandbox } from '@/lib/sandbox/sandbox-registry'
+import { getOrReconnectSandbox } from '@/lib/sandbox/sandbox-registry'
 import { getServerSession } from '@/lib/session/get-server-session'
 import { PROJECT_DIR } from '@/lib/sandbox/commands'
 
@@ -39,31 +38,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ success: false, error: 'No sandbox found for this task' }, { status: 400 })
     }
 
-    // Try to get sandbox from registry first
-    let sandbox = getSandbox(taskId)
-
-    // If not in registry, try to reconnect using sandboxId from database
-    if (!sandbox) {
-      try {
-        const sandboxToken = process.env.SANDBOX_VERCEL_TOKEN
-        const teamId = process.env.SANDBOX_VERCEL_TEAM_ID
-        const projectId = process.env.SANDBOX_VERCEL_PROJECT_ID
-
-        if (!sandboxToken || !teamId || !projectId) {
-          return NextResponse.json({ success: false, error: 'Sandbox credentials not configured' }, { status: 500 })
-        }
-
-        sandbox = await Sandbox.get({
-          sandboxId: task.sandboxId,
-          teamId,
-          projectId,
-          token: sandboxToken,
-        })
-      } catch (error) {
-        console.error('Failed to reconnect to sandbox:', error)
-        return NextResponse.json({ success: false, error: 'Failed to connect to sandbox' }, { status: 500 })
-      }
-    }
+    const sandbox = await getOrReconnectSandbox(taskId, task.sandboxId)
 
     if (!sandbox) {
       return NextResponse.json({ success: false, error: 'Sandbox not available' }, { status: 400 })

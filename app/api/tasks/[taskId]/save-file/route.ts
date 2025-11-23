@@ -3,8 +3,7 @@ import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
 import { eq, and, isNull } from 'drizzle-orm'
 import { getServerSession } from '@/lib/session/get-server-session'
-import { getSandbox } from '@/lib/sandbox/sandbox-registry'
-import { Sandbox } from '@vercel/sandbox'
+import { getOrReconnectSandbox } from '@/lib/sandbox/sandbox-registry'
 import { PROJECT_DIR } from '@/lib/sandbox/commands'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
@@ -38,31 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Task does not have an active sandbox' }, { status: 400 })
     }
 
-    // Try to get sandbox from registry first (keyed by taskId, not sandboxId)
-    let sandbox = getSandbox(taskId)
-
-    // If not in registry, try to reconnect using sandboxId from database
-    if (!sandbox) {
-      try {
-        const sandboxToken = process.env.SANDBOX_VERCEL_TOKEN
-        const teamId = process.env.SANDBOX_VERCEL_TEAM_ID
-        const projectId = process.env.SANDBOX_VERCEL_PROJECT_ID
-
-        if (!sandboxToken || !teamId || !projectId) {
-          return NextResponse.json({ error: 'Sandbox credentials not configured' }, { status: 500 })
-        }
-
-        sandbox = await Sandbox.get({
-          sandboxId: task.sandboxId,
-          teamId,
-          projectId,
-          token: sandboxToken,
-        })
-      } catch (error) {
-        console.error('Failed to reconnect to sandbox:', error)
-        return NextResponse.json({ error: 'Failed to connect to sandbox' }, { status: 500 })
-      }
-    }
+    const sandbox = await getOrReconnectSandbox(taskId, task.sandboxId)
 
     if (!sandbox) {
       return NextResponse.json({ error: 'Sandbox not available' }, { status: 400 })
@@ -71,7 +46,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     try {
       // Escape filename for safe shell interpolation
       // This prevents shell injection attacks when filename contains special characters
-      const escapedFilename = "'" + filename.replace(/'/g, "'\\''") + "'"
+      const singleQuoteEscape = String.raw`'\''`
+      const escapedFilename = `'${filename.replaceAll("'", singleQuoteEscape)}'`
 
       // Encode content as base64 to safely handle arbitrary content including special characters
       // This prevents shell injection attacks when content contains sequences like 'EOF'

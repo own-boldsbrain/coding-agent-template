@@ -1,4 +1,4 @@
-import { Sandbox } from '@vercel/sandbox'
+import { Sandbox } from './index'
 
 /**
  * Simplified sandbox registry since we now use Sandbox.get() to reconnect

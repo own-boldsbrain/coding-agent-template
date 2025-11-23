@@ -1,4 +1,4 @@
-import { Sandbox } from '@vercel/sandbox'
+import { Sandbox } from '../index'
 import { Writable } from 'stream'
 import { runCommandInSandbox, runInProject, PROJECT_DIR } from '../commands'
 import { AgentExecutionResult } from '../types'

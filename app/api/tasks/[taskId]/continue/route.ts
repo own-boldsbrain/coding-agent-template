@@ -5,7 +5,7 @@ import { tasks, taskMessages, connectors } from '@/lib/db/schema'
 import { eq, and, asc, isNull } from 'drizzle-orm'
 import { generateId } from '@/lib/utils/id'
 import { createTaskLogger } from '@/lib/utils/task-logger'
-import { Sandbox } from '@vercel/sandbox'
+import { Sandbox } from '@/lib/sandbox'
 import { createSandbox } from '@/lib/sandbox/creation'
 import { executeAgentInSandbox, AgentType } from '@/lib/sandbox/agents'
 import { pushChangesToBranch, shutdownSandbox } from '@/lib/sandbox/git'
@@ -172,9 +172,6 @@ async function continueTask(
         console.log('Calling Sandbox.get with sandboxId:', currentTask.sandboxId)
         const reconnectedSandbox = await Sandbox.get({
           sandboxId: currentTask.sandboxId,
-          teamId: process.env.SANDBOX_VERCEL_TEAM_ID!,
-          projectId: process.env.SANDBOX_VERCEL_PROJECT_ID!,
-          token: process.env.SANDBOX_VERCEL_TOKEN!,
         })
 
         if (reconnectedSandbox) {
@@ -258,9 +255,9 @@ async function continueTask(
     // Build conversation history context - put the new request FIRST, then context
     // Sanitize the current prompt to prevent CLI option parsing issues
     const sanitizedPrompt = prompt
-      .replace(/`/g, "'") // Replace backticks with single quotes
-      .replace(/\$/g, '') // Remove dollar signs
-      .replace(/\\/g, '') // Remove backslashes
+      .replaceAll('`', "'") // Replace backticks with single quotes
+      .replaceAll('$', '') // Remove dollar signs
+      .replaceAll('\\', '') // Remove backslashes
       .replace(/^-/gm, ' -') // Prefix lines starting with dash to avoid CLI option parsing
 
     let promptWithContext = sanitizedPrompt
@@ -268,18 +265,18 @@ async function continueTask(
     // When using --resume, the agent already has access to the full conversation history
     if (contextMessages.length > 0 && !isResumedSandbox) {
       let conversationHistory = '\n\n---\n\nFor context, here is the conversation history from this session:\n\n'
-      contextMessages.forEach((msg) => {
+      for (const msg of contextMessages) {
         const role = msg.role === 'user' ? 'User' : 'A'
         // Escape special characters and limit length to avoid shell parsing issues
         const truncatedContent = msg.content.length > 500 ? msg.content.substring(0, 500) + '...' : msg.content
         // Remove problematic characters that could cause shell parsing issues
         const sanitizedContent = truncatedContent
-          .replace(/`/g, "'") // Replace backticks with single quotes
-          .replace(/\$/g, '') // Remove dollar signs
-          .replace(/\\/g, '') // Remove backslashes
+          .replaceAll('`', "'") // Replace backticks with single quotes
+          .replaceAll('$', '') // Remove dollar signs
+          .replaceAll('\\', '') // Remove backslashes
           .replace(/^-/gm, ' -') // Prefix lines starting with dash to avoid CLI option parsing
         conversationHistory += `${role}: ${sanitizedContent}\n\n`
-      })
+      }
       promptWithContext = `${sanitizedPrompt}${conversationHistory}`
     }
 
@@ -372,7 +369,10 @@ async function continueTask(
           const url = new URL(repoUrl)
           const pathParts = url.pathname.split('/')
           if (pathParts.length >= 3) {
-            repoName = pathParts[pathParts.length - 1].replace(/\.git$/, '')
+            const lastSegment = pathParts.at(-1)
+            if (lastSegment) {
+              repoName = lastSegment.replace(/\.git$/, '')
+            }
           }
         } catch {
           // Ignore URL parsing errors

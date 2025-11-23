@@ -4,6 +4,7 @@ import { tasks } from '@/lib/db/schema'
 import { eq, and, isNull } from 'drizzle-orm'
 import { getServerSession } from '@/lib/session/get-server-session'
 import { PROJECT_DIR } from '@/lib/sandbox/commands'
+import { getOrReconnectSandbox } from '@/lib/sandbox/sandbox-registry'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
   try {
@@ -35,27 +36,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ success: false, error: 'Sandbox not available' }, { status: 400 })
     }
 
-    // Get sandbox
-    const { getSandbox } = await import('@/lib/sandbox/sandbox-registry')
-    const { Sandbox } = await import('@vercel/sandbox')
-
-    let sandbox = getSandbox(taskId)
-
-    // Try to reconnect if not in registry
-    if (!sandbox) {
-      const sandboxToken = process.env.SANDBOX_VERCEL_TOKEN
-      const teamId = process.env.SANDBOX_VERCEL_TEAM_ID
-      const projectId = process.env.SANDBOX_VERCEL_PROJECT_ID
-
-      if (sandboxToken && teamId && projectId) {
-        sandbox = await Sandbox.get({
-          sandboxId: task.sandboxId,
-          teamId,
-          projectId,
-          token: sandboxToken,
-        })
-      }
-    }
+    const sandbox = await getOrReconnectSandbox(taskId, task.sandboxId)
 
     if (!sandbox) {
       return NextResponse.json({ success: false, error: 'Sandbox not found or inactive' }, { status: 400 })

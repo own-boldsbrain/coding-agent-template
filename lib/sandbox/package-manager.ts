@@ -1,4 +1,4 @@
-import { Sandbox } from '@vercel/sandbox'
+import type { SandboxType as Sandbox } from './index'
 import { runInProject } from './commands'
 import { TaskLogger } from '@/lib/utils/task-logger'
 

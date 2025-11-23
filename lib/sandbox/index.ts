@@ -1,2 +1,2 @@
-export { DockerSandbox as Sandbox } from './docker-sandbox'
-export type { DockerSandbox as SandboxType } from './docker-sandbox'
+export { Sandbox, usingDockerSandbox } from './provider'
+export type { SandboxType } from './provider'
