@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import Claude from '@/components/logos/claude'
+import Codex from '@/components/logos/codex'
+import Copilot from '@/components/logos/copilot'
+import Cursor from '@/components/logos/cursor'
+import Gemini from '@/components/logos/gemini'
+import OpenCode from '@/components/logos/opencode'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,19 +16,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Label } from '@/components/ui/label'
-import { User, Calendar, MessageSquare, MoreVertical, ListTodo } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Calendar, ListTodo, MessageSquare, MoreVertical, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import Claude from '@/components/logos/claude'
-import Codex from '@/components/logos/codex'
-import Copilot from '@/components/logos/copilot'
-import Cursor from '@/components/logos/cursor'
-import Gemini from '@/components/logos/gemini'
-import OpenCode from '@/components/logos/opencode'
-import Qwen from '@/components/logos/qwen'
-import DeepSeek from '@/components/logos/deepseek'
 
 const CODING_AGENTS = [
   { value: 'claude', label: 'Claude', icon: Claude },
@@ -109,9 +107,9 @@ function formatDistanceToNow(date: Date): string {
 
 function getContrastColor(hexColor: string): string {
   // Convert hex to RGB
-  const r = parseInt(hexColor.slice(0, 2), 16)
-  const g = parseInt(hexColor.slice(2, 4), 16)
-  const b = parseInt(hexColor.slice(4, 6), 16)
+  const r = Number.parseInt(hexColor.slice(0, 2), 16)
+  const g = Number.parseInt(hexColor.slice(2, 4), 16)
+  const b = Number.parseInt(hexColor.slice(4, 6), 16)
 
   // Calculate luminance
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
@@ -411,7 +409,10 @@ export function RepoIssues({ owner, repo }: RepoIssuesProps) {
                   <Label htmlFor="max-duration" className="text-sm font-medium">
                     Maximum Duration
                   </Label>
-                  <Select value={maxDuration.toString()} onValueChange={(value) => setMaxDuration(parseInt(value))}>
+                  <Select
+                    value={maxDuration.toString()}
+                    onValueChange={(value) => setMaxDuration(Number.parseInt(value))}
+                  >
                     <SelectTrigger id="max-duration" className="w-full">
                       <SelectValue />
                     </SelectTrigger>

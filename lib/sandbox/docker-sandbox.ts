@@ -1,10 +1,10 @@
-import { exec, spawn, ChildProcess } from 'node:child_process'
-import { promisify } from 'node:util'
+import { type ChildProcess, exec, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
+import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import fs from 'node:fs/promises'
-import { Writable } from 'node:stream'
+import type { Writable } from 'node:stream'
+import { promisify } from 'node:util'
 
 const execAsync = promisify(exec)
 const SINGLE_QUOTE_ESCAPE = String.raw`'\''`
@@ -77,7 +77,7 @@ interface InspectResult {
 
 function escapeArg(arg: string): string {
   if (!arg) return ''
-  return `'` + arg.split(`'`).join(SINGLE_QUOTE_ESCAPE) + `'`
+  return `'${arg.split(`'`).join(SINGLE_QUOTE_ESCAPE)}'`
 }
 
 export class DockerSandbox {
@@ -105,20 +105,20 @@ export class DockerSandbox {
   }
 
   static async create(config: DockerSandboxConfig): Promise<DockerSandbox> {
-    await this.ensureImage()
+    await DockerSandbox.ensureImage()
     const sandbox = new DockerSandbox(config)
     await sandbox.initialize()
-    this.instances.set(sandbox.sandboxId, sandbox)
+    DockerSandbox.instances.set(sandbox.sandboxId, sandbox)
     return sandbox
   }
 
   static async get(params: { sandboxId: string } & Record<string, unknown>): Promise<DockerSandbox> {
-    const existing = this.instances.get(params.sandboxId)
+    const existing = DockerSandbox.instances.get(params.sandboxId)
     if (existing) {
       return existing
     }
 
-    const inspect = await this.inspectContainer(params.sandboxId)
+    const inspect = await DockerSandbox.inspectContainer(params.sandboxId)
     if (!inspect) {
       throw new Error('Sandbox not found')
     }
@@ -143,7 +143,7 @@ export class DockerSandbox {
     sandbox.cacheVolume = parsedConfig.cacheVolume
     sandbox.containerId = inspect.Id
     sandbox.status = inspect.State?.Status || 'running'
-    this.instances.set(sandbox.sandboxId, sandbox)
+    DockerSandbox.instances.set(sandbox.sandboxId, sandbox)
     return sandbox
   }
 
@@ -158,12 +158,12 @@ export class DockerSandbox {
   }
 
   private static async ensureImage() {
-    if (this.imagePromise) {
-      await this.imagePromise
+    if (DockerSandbox.imagePromise) {
+      await DockerSandbox.imagePromise
       return
     }
 
-    this.imagePromise = (async () => {
+    DockerSandbox.imagePromise = (async () => {
       try {
         await execAsync(`docker image inspect ${IMAGE_NAME}`)
       } catch {
@@ -203,7 +203,7 @@ CMD ["/bin/bash"]
       }
     })()
 
-    await this.imagePromise
+    await DockerSandbox.imagePromise
   }
 
   private async initialize() {
@@ -221,14 +221,7 @@ CMD ["/bin/bash"]
       ).toString('base64')
 
       const { stdout } = await execAsync(
-        `docker run -d ${portFlags} --name ${this.sandboxId} ` +
-          `--add-host=host.docker.internal:host-gateway ` +
-          `-e OLLAMA_HOST=http://host.docker.internal:11434 ` +
-          `-v ${this.workspaceVolume}:/workspace ` +
-          `-v ${this.cacheVolume}:/workspace/.cache ` +
-          `--label ${IDENT_LABEL}=true ` +
-          `--label ${CONFIG_LABEL}=${encodedConfig} ` +
-          `-w /workspace ${IMAGE_NAME} tail -f /dev/null`,
+        `docker run -d ${portFlags} --name ${this.sandboxId} --add-host=host.docker.internal:host-gateway -e OLLAMA_HOST=http://host.docker.internal:11434 -v ${this.workspaceVolume}:/workspace -v ${this.cacheVolume}:/workspace/.cache --label ${IDENT_LABEL}=true --label ${CONFIG_LABEL}=${encodedConfig} -w /workspace ${IMAGE_NAME} tail -f /dev/null`,
         { maxBuffer: 1024 * 1024 },
       )
 

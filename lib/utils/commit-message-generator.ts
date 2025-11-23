@@ -50,7 +50,7 @@ Return ONLY the commit message, nothing else.`
 
     // Validate the commit message length
     if (commitMessage.length > 72) {
-      return commitMessage.substring(0, 69) + '...'
+      return `${commitMessage.substring(0, 69)}...`
     }
 
     return commitMessage
@@ -68,5 +68,5 @@ export function createFallbackCommitMessage(description: string): string {
   }
 
   // Otherwise, truncate and add ellipsis
-  return description.substring(0, 69) + '...'
+  return `${description.substring(0, 69)}...`
 }

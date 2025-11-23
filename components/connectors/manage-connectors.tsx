@@ -1,10 +1,15 @@
 'use client'
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { useConnectors } from '@/components/connectors-provider'
+import BrowserbaseIcon from '@/components/icons/browserbase-icon'
+import Context7Icon from '@/components/icons/context7-icon'
+import ConvexIcon from '@/components/icons/convex-icon'
+import FigmaIcon from '@/components/icons/figma-icon'
+import HuggingFaceIcon from '@/components/icons/huggingface-icon'
+import LinearIcon from '@/components/icons/linear-icon'
+import NotionIcon from '@/components/icons/notion-icon'
+import PlaywrightIcon from '@/components/icons/playwright-icon'
+import SupabaseIcon from '@/components/icons/supabase-icon'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import {
   AlertDialog,
@@ -16,44 +21,38 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { createConnector, updateConnector, deleteConnector, toggleConnectorStatus } from '@/lib/actions/connectors'
-import type { Connector } from '@/lib/db/schema'
-import { useActionState } from 'react'
-import { toast } from 'sonner'
-import { useEffect, useState, useRef } from 'react'
-import { useConnectors } from '@/components/connectors-provider'
-import { Loader2, Plus, X, ArrowLeft, Eye, EyeOff, Pencil, Server } from 'lucide-react'
-import BrowserbaseIcon from '@/components/icons/browserbase-icon'
-import Context7Icon from '@/components/icons/context7-icon'
-import ConvexIcon from '@/components/icons/convex-icon'
-import FigmaIcon from '@/components/icons/figma-icon'
-import HuggingFaceIcon from '@/components/icons/huggingface-icon'
-import LinearIcon from '@/components/icons/linear-icon'
-import NotionIcon from '@/components/icons/notion-icon'
-import PlaywrightIcon from '@/components/icons/playwright-icon'
-import SupabaseIcon from '@/components/icons/supabase-icon'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { createConnector, deleteConnector, toggleConnectorStatus, updateConnector } from '@/lib/actions/connectors'
 import {
+  type PresetConfig,
+  addCustomServerAtom,
+  clearPresetActionAtom,
   connectorDialogViewAtom,
   editingConnectorAtom,
-  selectedPresetAtom,
-  serverTypeAtom,
   envVarsAtom,
-  visibleEnvVarsAtom,
-  isEditingAtom,
-  resetDialogStateAtom,
-  setEditingConnectorActionAtom,
-  startAddingConnectorAtom,
-  selectPresetActionAtom,
-  addCustomServerAtom,
   goBackFromFormAtom,
   goBackFromPresetsAtom,
+  isEditingAtom,
   onSuccessActionAtom,
-  clearPresetActionAtom,
-  type PresetConfig,
+  resetDialogStateAtom,
+  selectPresetActionAtom,
+  selectedPresetAtom,
+  serverTypeAtom,
+  setEditingConnectorActionAtom,
+  startAddingConnectorAtom,
+  visibleEnvVarsAtom,
 } from '@/lib/atoms/connector-dialog'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { ArrowLeft, Eye, EyeOff, Loader2, Pencil, Plus, Server, X } from 'lucide-react'
+import { useActionState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 interface ConnectorDialogProps {
   open: boolean
@@ -126,7 +125,7 @@ export function ConnectorDialog({ open, onOpenChange }: ConnectorDialogProps) {
   const [loadingConnectors, setLoadingConnectors] = useState<Set<string>>(new Set())
 
   // Jotai atoms
-  const [view, setView] = useAtom(connectorDialogViewAtom)
+  const [view, _setView] = useAtom(connectorDialogViewAtom)
   const editingConnector = useAtomValue(editingConnectorAtom)
   const isEditing = useAtomValue(isEditingAtom)
   const [serverType, setServerType] = useAtom(serverTypeAtom)
@@ -345,11 +344,11 @@ export function ConnectorDialog({ open, onOpenChange }: ConnectorDialogProps) {
                     <Card key={i} className="flex flex-row items-center justify-between p-4">
                       <div className="flex items-start space-x-4 flex-1">
                         <div className="w-full space-y-2">
-                          <div className="h-4 bg-muted animate-pulse rounded w-1/4"></div>
-                          <div className="h-3 bg-muted animate-pulse rounded w-3/4"></div>
+                          <div className="h-4 bg-muted animate-pulse rounded w-1/4" />
+                          <div className="h-3 bg-muted animate-pulse rounded w-3/4" />
                         </div>
                       </div>
-                      <div className="w-12 h-6 bg-muted animate-pulse rounded-full"></div>
+                      <div className="w-12 h-6 bg-muted animate-pulse rounded-full" />
                     </Card>
                   ))}
                 </div>
@@ -571,9 +570,7 @@ export function ConnectorDialog({ open, onOpenChange }: ConnectorDialogProps) {
                   <div className="flex items-center justify-between">
                     <Label>
                       Environment Variables{' '}
-                      {selectedPreset && selectedPreset.envKeys && selectedPreset.envKeys.length > 0
-                        ? ''
-                        : '(optional)'}
+                      {selectedPreset?.envKeys && selectedPreset.envKeys.length > 0 ? '' : '(optional)'}
                     </Label>
                     <Button type="button" size="sm" variant="outline" onClick={addEnvVar}>
                       <Plus className="h-4 w-4 mr-1" />

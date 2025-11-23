@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
 import { getServerSession } from '@/lib/session/get-server-session'
+import { and, eq, isNull } from 'drizzle-orm'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ owner: string; repo: string; pr_number: string }> },
 ) {
   try {
@@ -16,9 +16,9 @@ export async function GET(
     }
 
     const { owner, repo, pr_number } = await context.params
-    const prNumber = parseInt(pr_number, 10)
+    const prNumber = Number.parseInt(pr_number, 10)
 
-    if (isNaN(prNumber)) {
+    if (Number.isNaN(prNumber)) {
       return NextResponse.json({ error: 'Invalid PR number' }, { status: 400 })
     }
 

@@ -1,9 +1,9 @@
 import 'server-only'
 
-import { db } from '@/lib/db/client'
-import { users, accounts } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
 import { decrypt } from '@/lib/crypto'
+import { db } from '@/lib/db/client'
+import { accounts, users } from '@/lib/db/schema'
+import { and, eq } from 'drizzle-orm'
 
 /**
  * Get the OAuth access token for a user from the database

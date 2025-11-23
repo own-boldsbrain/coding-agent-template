@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+/** @format */
+
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GET } from './route'
-import { NextResponse } from 'next/server'
 
 // Mock dependencies
 vi.mock('@/lib/session/get-server-session', () => ({
@@ -31,8 +32,8 @@ vi.mock('drizzle-orm', () => ({
   isNotNull: vi.fn(),
 }))
 
-import { getServerSession } from '@/lib/session/get-server-session'
 import { db } from '@/lib/db/client'
+import { getServerSession } from '@/lib/session/get-server-session'
 
 describe('GET /api/sandboxes', () => {
   beforeEach(() => {
@@ -40,7 +41,7 @@ describe('GET /api/sandboxes', () => {
   })
 
   it('should return 401 if user is not authenticated', async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null)
+    vi.mocked(getServerSession).mockResolvedValue(undefined)
 
     const response = await GET()
     const data = await response.json()

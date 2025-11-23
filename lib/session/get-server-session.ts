@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
+import { cache } from 'react'
 import { SESSION_COOKIE_NAME } from './constants'
 import { getSessionFromCookie } from './server'
-import { cache } from 'react'
 
 export const getServerSession = cache(async () => {
   const store = await cookies()

@@ -1,56 +1,22 @@
 'use client'
 
-import { Task, Connector } from '@/lib/db/schema'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  GitBranch,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-  Server,
-  Cable,
-  Square,
-  GitPullRequest,
-  RotateCcw,
-  Trash2,
-  ChevronDown,
-  XCircle,
-  Code,
-  MessageSquare,
-  FileText,
-  Monitor,
-  Eye,
-  EyeOff,
-  RefreshCw,
-  Play,
-  StopCircle,
-  MoreVertical,
-  X,
-  ExternalLink,
-  Plus,
-  Maximize,
-  Minimize,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { toast } from 'sonner'
-import { Claude, Codex, Copilot, Cursor, Gemini, OpenCode, Qwen, DeepSeek } from '@/components/logos'
 import { useTasks } from '@/components/app-layout'
-import {
-  getShowFilesPane,
-  setShowFilesPane as saveShowFilesPane,
-  getShowCodePane,
-  setShowCodePane as saveShowCodePane,
-  getShowPreviewPane,
-  setShowPreviewPane as saveShowPreviewPane,
-  getShowChatPane,
-  setShowChatPane as saveShowChatPane,
-} from '@/lib/utils/cookies'
+import { CreatePRDialog } from '@/components/create-pr-dialog'
 import { FileBrowser } from '@/components/file-browser'
 import { FileDiffViewer } from '@/components/file-diff-viewer'
-import { CreatePRDialog } from '@/components/create-pr-dialog'
+import BrowserbaseIcon from '@/components/icons/browserbase-icon'
+import Context7Icon from '@/components/icons/context7-icon'
+import ConvexIcon from '@/components/icons/convex-icon'
+import FigmaIcon from '@/components/icons/figma-icon'
+import HuggingFaceIcon from '@/components/icons/huggingface-icon'
+import LinearIcon from '@/components/icons/linear-icon'
+import NotionIcon from '@/components/icons/notion-icon'
+import PlaywrightIcon from '@/components/icons/playwright-icon'
+import SupabaseIcon from '@/components/icons/supabase-icon'
+import VercelIcon from '@/components/icons/vercel-icon'
+import { Claude, Codex, Copilot, Cursor, DeepSeek, Gemini, OpenCode, Qwen } from '@/components/logos'
 import { MergePRDialog } from '@/components/merge-pr-dialog'
+import { PRStatusIcon } from '@/components/pr-status-icon'
 import { TaskChat } from '@/components/task-chat'
 import {
   AlertDialog,
@@ -62,6 +28,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,23 +38,47 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import type { Connector, Task } from '@/lib/db/schema'
+import { cn } from '@/lib/utils'
+import {
+  getShowChatPane,
+  getShowCodePane,
+  getShowFilesPane,
+  getShowPreviewPane,
+  setShowChatPane as saveShowChatPane,
+  setShowCodePane as saveShowCodePane,
+  setShowFilesPane as saveShowFilesPane,
+  setShowPreviewPane as saveShowPreviewPane,
+} from '@/lib/utils/cookies'
+import {
+  AlertCircle,
+  Cable,
+  ChevronDown,
+  Code,
+  FileText,
+  GitBranch,
+  GitPullRequest,
+  Loader2,
+  Maximize,
+  MessageSquare,
+  Minimize,
+  Monitor,
+  MoreVertical,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Server,
+  StopCircle,
+  Trash2,
+  X,
+  XCircle,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import BrowserbaseIcon from '@/components/icons/browserbase-icon'
-import Context7Icon from '@/components/icons/context7-icon'
-import ConvexIcon from '@/components/icons/convex-icon'
-import FigmaIcon from '@/components/icons/figma-icon'
-import HuggingFaceIcon from '@/components/icons/huggingface-icon'
-import LinearIcon from '@/components/icons/linear-icon'
-import NotionIcon from '@/components/icons/notion-icon'
-import PlaywrightIcon from '@/components/icons/playwright-icon'
-import SupabaseIcon from '@/components/icons/supabase-icon'
-import VercelIcon from '@/components/icons/vercel-icon'
-import { PRStatusIcon } from '@/components/pr-status-icon'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 interface TaskDetailsProps {
   task: Task
@@ -210,8 +203,8 @@ export function TaskDetails({ task, maxSandboxDuration = 300 }: TaskDetailsProps
     filesPane === 'files' ? (subMode === 'local' ? 'all-local' : 'all') : subMode
   const [activeTab, setActiveTab] = useState<'code' | 'chat' | 'preview'>('code')
   const [showFilesList, setShowFilesList] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
-  const [sandboxTimeRemaining, setSandboxTimeRemaining] = useState<string | null>(null)
+  const [_showPreview, _setShowPreview] = useState(false)
+  const [_sandboxTimeRemaining, setSandboxTimeRemaining] = useState<string | null>(null)
 
   // Desktop pane toggles - initialize from cookies
   const [showFilesPane, setShowFilesPane] = useState(() => getShowFilesPane())
@@ -315,15 +308,14 @@ export function TaskDetails({ task, maxSandboxDuration = 300 }: TaskDetailsProps
   const selectedItemIsFolder = selectedItemIsFolderByMode[viewMode]
 
   // Helper function to format dates - show only time if same day as today
-  const formatDateTime = (date: Date) => {
+  const _formatDateTime = (date: Date) => {
     const today = new Date()
     const isToday = date.toDateString() === today.toDateString()
 
     if (isToday) {
       return date.toLocaleTimeString()
-    } else {
-      return `${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`
     }
+    return `${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`
   }
 
   // View mode change handler
@@ -1007,7 +999,7 @@ export function TaskDetails({ task, maxSandboxDuration = 300 }: TaskDetailsProps
         }
 
         // Switch to tab 1-9 with Cmd/Ctrl + 1-9
-        const digit = parseInt(event.key)
+        const digit = Number.parseInt(event.key)
         if (digit >= 1 && digit <= 9 && openTabs.length >= digit) {
           event.preventDefault()
           switchToTab(digit - 1)
@@ -1862,7 +1854,7 @@ export function TaskDetails({ task, maxSandboxDuration = 300 }: TaskDetailsProps
                       onSavingStateChange={
                         selectedFile ? (isSaving) => handleSavingStateChange(selectedFile, isSaving) : undefined
                       }
-                      onOpenFile={(filename, lineNumber) => {
+                      onOpenFile={(filename, _lineNumber) => {
                         openFileInTab(filename)
                         // TODO: Optionally scroll to lineNumber after opening
                       }}
@@ -1935,33 +1927,30 @@ export function TaskDetails({ task, maxSandboxDuration = 300 }: TaskDetailsProps
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {task.keepAlive && (
-                          <>
-                            {sandboxHealth === 'stopped' || !task.sandboxUrl ? (
-                              <DropdownMenuItem onClick={handleStartSandbox} disabled={isStartingSandbox}>
-                                {isStartingSandbox ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Starting...
-                                  </>
-                                ) : (
-                                  'Start Sandbox'
-                                )}
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onClick={handleStopSandbox} disabled={isStoppingSandbox}>
-                                {isStoppingSandbox ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Stopping...
-                                  </>
-                                ) : (
-                                  'Stop Sandbox'
-                                )}
-                              </DropdownMenuItem>
-                            )}
-                          </>
-                        )}
+                        {task.keepAlive &&
+                          (sandboxHealth === 'stopped' || !task.sandboxUrl ? (
+                            <DropdownMenuItem onClick={handleStartSandbox} disabled={isStartingSandbox}>
+                              {isStartingSandbox ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Starting...
+                                </>
+                              ) : (
+                                'Start Sandbox'
+                              )}
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={handleStopSandbox} disabled={isStoppingSandbox}>
+                              {isStoppingSandbox ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Stopping...
+                                </>
+                              ) : (
+                                'Stop Sandbox'
+                              )}
+                            </DropdownMenuItem>
+                          ))}
                         {sandboxHealth === 'running' && (
                           <DropdownMenuItem onClick={handleRestartDevServer} disabled={isRestartingDevServer}>
                             {isRestartingDevServer ? (
@@ -2087,7 +2076,7 @@ export function TaskDetails({ task, maxSandboxDuration = 300 }: TaskDetailsProps
                       onSavingStateChange={
                         selectedFile ? (isSaving) => handleSavingStateChange(selectedFile, isSaving) : undefined
                       }
-                      onOpenFile={(filename, lineNumber) => {
+                      onOpenFile={(filename, _lineNumber) => {
                         openFileInTab(filename)
                         // TODO: Optionally scroll to lineNumber after opening
                       }}
@@ -2167,33 +2156,30 @@ export function TaskDetails({ task, maxSandboxDuration = 300 }: TaskDetailsProps
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {task.keepAlive && (
-                          <>
-                            {task.sandboxUrl ? (
-                              <DropdownMenuItem onClick={handleStopSandbox} disabled={isStoppingSandbox}>
-                                {isStoppingSandbox ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Stopping...
-                                  </>
-                                ) : (
-                                  'Stop Sandbox'
-                                )}
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onClick={handleStartSandbox} disabled={isStartingSandbox}>
-                                {isStartingSandbox ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Starting...
-                                  </>
-                                ) : (
-                                  'Start Sandbox'
-                                )}
-                              </DropdownMenuItem>
-                            )}
-                          </>
-                        )}
+                        {task.keepAlive &&
+                          (task.sandboxUrl ? (
+                            <DropdownMenuItem onClick={handleStopSandbox} disabled={isStoppingSandbox}>
+                              {isStoppingSandbox ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Stopping...
+                                </>
+                              ) : (
+                                'Stop Sandbox'
+                              )}
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={handleStartSandbox} disabled={isStartingSandbox}>
+                              {isStartingSandbox ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Starting...
+                                </>
+                              ) : (
+                                'Start Sandbox'
+                              )}
+                            </DropdownMenuItem>
+                          ))}
                         <DropdownMenuItem
                           onClick={handleRestartDevServer}
                           disabled={isRestartingDevServer || !task.sandboxUrl}
@@ -2472,7 +2458,7 @@ export function TaskDetails({ task, maxSandboxDuration = 300 }: TaskDetailsProps
                   </Label>
                   <Select
                     value={tryAgainMaxDuration.toString()}
-                    onValueChange={(value) => setTryAgainMaxDuration(parseInt(value))}
+                    onValueChange={(value) => setTryAgainMaxDuration(Number.parseInt(value))}
                   >
                     <SelectTrigger id="try-again-max-duration" className="w-full">
                       <SelectValue />

@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import Image from 'next/image'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Lock, Loader2 } from 'lucide-react'
-import { useAtomValue, useSetAtom, useAtom } from 'jotai'
-import { githubConnectionAtom } from '@/lib/atoms/github-connection'
 import { githubOwnersAtom, githubReposAtomFamily } from '@/lib/atoms/github-cache'
+import { githubConnectionAtom } from '@/lib/atoms/github-connection'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { Loader2, Lock } from 'lucide-react'
+import Image from 'next/image'
+import { useEffect, useRef, useState } from 'react'
 
 interface GitHubOwner {
   login: string
@@ -48,7 +48,7 @@ export function RepoSelector({
   const [loadingOwners, setLoadingOwners] = useState(true)
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [_isRefreshing, setIsRefreshing] = useState(false)
 
   // Ref for the filter input to focus it when dropdown opens
   const filterInputRef = useRef<HTMLInputElement>(null)
@@ -373,21 +373,20 @@ export function RepoSelector({
           )}
         </SelectTrigger>
         <SelectContent>
-          {owners &&
-            owners.map((owner) => (
-              <SelectItem key={owner.login} value={owner.login}>
-                <div className="flex items-center gap-2">
-                  <Image
-                    src={owner.avatar_url}
-                    alt={owner.login}
-                    width={16}
-                    height={16}
-                    className="w-4 h-4 rounded-full"
-                  />
-                  <span>{owner.login}</span>
-                </div>
-              </SelectItem>
-            ))}
+          {owners?.map((owner) => (
+            <SelectItem key={owner.login} value={owner.login}>
+              <div className="flex items-center gap-2">
+                <Image
+                  src={owner.avatar_url}
+                  alt={owner.login}
+                  width={16}
+                  height={16}
+                  className="w-4 h-4 rounded-full"
+                />
+                <span>{owner.login}</span>
+              </div>
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 

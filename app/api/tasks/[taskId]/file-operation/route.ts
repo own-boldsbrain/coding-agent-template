@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
-import { getServerSession } from '@/lib/session/get-server-session'
 import { PROJECT_DIR } from '@/lib/sandbox/commands'
+import { getServerSession } from '@/lib/session/get-server-session'
+import { and, eq, isNull } from 'drizzle-orm'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
   try {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Determine target directory
-    const targetDir = targetPath || '.'
+    const _targetDir = targetPath || '.'
     const sourceBasename = sourceFile.split('/').pop()
     const targetFile = targetPath ? `${targetPath}/${sourceBasename}` : sourceBasename
 
@@ -81,7 +81,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
 
       return NextResponse.json({ success: true, message: 'File copied successfully' })
-    } else if (operation === 'cut') {
+    }
+    if (operation === 'cut') {
       // Move file
       const mvResult = await sandbox.runCommand({
         cmd: 'mv',
@@ -96,9 +97,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
 
       return NextResponse.json({ success: true, message: 'File moved successfully' })
-    } else {
-      return NextResponse.json({ success: false, error: 'Invalid operation' }, { status: 400 })
     }
+    return NextResponse.json({ success: false, error: 'Invalid operation' }, { status: 400 })
   } catch (error) {
     console.error('Error performing file operation:', error)
     return NextResponse.json({ success: false, error: 'Failed to perform file operation' }, { status: 500 })

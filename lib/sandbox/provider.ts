@@ -1,4 +1,4 @@
-import { DockerSandbox } from './docker-sandbox'
+import type { DockerSandbox } from './docker-sandbox'
 
 export { DockerSandbox as Sandbox } from './docker-sandbox'
 export type { DockerSandbox as SandboxType } from './docker-sandbox'

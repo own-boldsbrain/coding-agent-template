@@ -1,17 +1,17 @@
 'use client'
 
-import { useState } from 'react'
-import { useTask } from '@/lib/hooks/use-task'
+import { useTasks } from '@/components/app-layout'
+import { User } from '@/components/auth/user'
+import { GitHubStarsButton } from '@/components/github-stars-button'
+import { LogsPane } from '@/components/logs-pane'
+import { PageHeader } from '@/components/page-header'
 import { TaskDetails } from '@/components/task-details'
 import { TaskPageHeader } from '@/components/task-page-header'
-import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
-import { useTasks } from '@/components/app-layout'
-import { LogsPane } from '@/components/logs-pane'
 import { VERCEL_DEPLOY_URL } from '@/lib/constants'
-import { User } from '@/components/auth/user'
+import { useTask } from '@/lib/hooks/use-task'
 import type { Session } from '@/lib/session/types'
-import { GitHubStarsButton } from '@/components/github-stars-button'
+import { useState } from 'react'
 
 interface TaskPageClientProps {
   taskId: string

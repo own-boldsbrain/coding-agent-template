@@ -1,4 +1,6 @@
-import { jwtDecrypt, base64url } from 'jose'
+/** @format */
+
+import { base64url, jwtDecrypt } from 'jose'
 
 export async function decryptJWE<T extends string | object = string | object>(
   cyphertext: string,
@@ -14,8 +16,9 @@ export async function decryptJWE<T extends string | object = string | object>(
     const { payload } = await jwtDecrypt(cyphertext, base64url.decode(secret))
     const decoded = payload as T
     if (typeof decoded === 'object' && decoded !== null) {
-      delete (decoded as Record<string, unknown>).iat
-      delete (decoded as Record<string, unknown>).exp
+      const decodedRecord = decoded as Record<string, unknown>
+      decodedRecord.iat = undefined
+      decodedRecord.exp = undefined
     }
     return decoded
   } catch {

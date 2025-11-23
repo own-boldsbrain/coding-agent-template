@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { decrypt } from '@/lib/crypto'
 import { db } from '@/lib/db/client'
 import { connectors } from '@/lib/db/schema'
-import { decrypt } from '@/lib/crypto'
 import { getSessionFromReq } from '@/lib/session/server'
 import { eq } from 'drizzle-orm'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
   try {

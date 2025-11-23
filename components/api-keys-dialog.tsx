@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { toast } from 'sonner'
 import { Eye, EyeOff } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 interface ApiKeysDialogProps {
   open: boolean
@@ -106,7 +106,7 @@ export function ApiKeysDialog({ open, onOpenChange }: ApiKeysDialogProps) {
     }
   }
 
-  const handleDelete = async (provider: Provider) => {
+  const _handleDelete = async (provider: Provider) => {
     setLoading(true)
     try {
       const response = await fetch(`/api/api-keys?provider=${provider}`, {

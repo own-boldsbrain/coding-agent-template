@@ -41,7 +41,7 @@ export async function detectPortFromRepo(repoUrl: string, githubToken?: string |
         // Not a file, use default
         return 3000
       }
-    } catch (error) {
+    } catch (_error) {
       // package.json doesn't exist or can't be accessed, use default
       return 3000
     }

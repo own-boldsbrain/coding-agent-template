@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
-import { eq, and, isNotNull } from 'drizzle-orm'
 import { getServerSession } from '@/lib/session/get-server-session'
+import { and, eq, isNotNull } from 'drizzle-orm'
+import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {

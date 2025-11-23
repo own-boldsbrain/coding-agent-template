@@ -1,7 +1,7 @@
 import { TaskPageClient } from '@/components/task-page-client'
-import { getServerSession } from '@/lib/session/get-server-session'
-import { getGitHubStars } from '@/lib/github-stars'
 import { getMaxSandboxDuration } from '@/lib/db/settings'
+import { getGitHubStars } from '@/lib/github-stars'
+import { getServerSession } from '@/lib/session/get-server-session'
 
 interface TaskPageProps {
   params: {
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: TaskPageProps) {
           pageTitle = task[0].title
         } else if (task[0].prompt) {
           // Truncate prompt to 60 characters
-          pageTitle = task[0].prompt.length > 60 ? task[0].prompt.slice(0, 60) + '...' : task[0].prompt
+          pageTitle = task[0].prompt.length > 60 ? `${task[0].prompt.slice(0, 60)}...` : task[0].prompt
         }
       }
     } catch (error) {

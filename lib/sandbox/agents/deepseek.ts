@@ -1,17 +1,17 @@
-import { SandboxType as Sandbox } from '../index'
-import { AgentExecutionResult } from './index'
+import type { SandboxType as Sandbox } from '../index'
+import type { AgentExecutionResult } from './index'
 
 export async function executeDeepSeekInSandbox(
   sandbox: Sandbox,
   instruction: string,
   logger: { info: (msg: string) => Promise<void>; error: (msg: string) => Promise<void> },
   selectedModel?: string,
-  mcpServers?: any,
+  _mcpServers?: any,
 ): Promise<AgentExecutionResult> {
   const ollamaHost = process.env.OLLAMA_HOST || 'http://host.docker.internal:11434'
   const model = selectedModel || 'deepseek-coder:6.7b'
 
-  await logger.info('Using DeepSeek model: ' + model)
+  await logger.info(`Using DeepSeek model: ${model}`)
 
   const pythonScript = `import requests
 import json

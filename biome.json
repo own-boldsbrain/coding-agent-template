@@ -1,13 +1,21 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.0/schema.json",
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
+  },
   "files": {
-    "ignore": ["node_modules", ".next", ".turbo", "out", "build", "dist"]
+    "ignore": ["node_modules", ".next", ".turbo", "out", "build", "dist", "*.min.js", "*.d.ts", "coverage", ".husky"],
+    "ignoreUnknown": true
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 120
+    "lineWidth": 120,
+    "lineEnding": "lf"
   },
   "organizeImports": {
     "enabled": true
@@ -16,36 +24,83 @@
     "formatter": {
       "quoteStyle": "single",
       "jsxQuoteStyle": "double",
-      "semicolons": "asNeeded"
+      "semicolons": "asNeeded",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "bracketSpacing": true,
+      "attributePosition": "auto"
+    }
+  },
+  "json": {
+    "formatter": {
+      "enabled": true,
+      "indentWidth": 2,
+      "trailingCommas": "none"
     }
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "a11y": {
-        "recommended": false
+      "recommended": true,
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": "warn",
+        "useExhaustiveDependencies": "warn",
+        "useHookAtTopLevel": "error"
       },
       "style": {
-        "recommended": false
+        "noNonNullAssertion": "warn",
+        "useImportType": "error",
+        "useNodejsImportProtocol": "error",
+        "useNumberNamespace": "error"
       },
       "suspicious": {
-        "recommended": false
+        "noExplicitAny": "warn",
+        "noConsoleLog": "off",
+        "noArrayIndexKey": "warn"
       },
       "complexity": {
-        "recommended": false
-      },
-      "correctness": {
-        "recommended": false
-      },
-      "nursery": {
-        "recommended": false
+        "noExcessiveCognitiveComplexity": "warn",
+        "noForEach": "off",
+        "useLiteralKeys": "warn"
       },
       "performance": {
-        "recommended": false
+        "noAccumulatingSpread": "warn",
+        "noDelete": "warn"
       },
       "security": {
-        "recommended": false
+        "noDangerouslySetInnerHtml": "warn"
+      },
+      "a11y": {
+        "noAccessKey": "warn",
+        "noBlankTarget": "warn",
+        "useAltText": "warn",
+        "useButtonType": "warn",
+        "useValidAnchor": "warn"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "include": ["*.test.ts", "*.test.tsx", "**/__tests__/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["*.config.ts", "*.config.js", "*.config.mjs"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNodejsImportProtocol": "off"
+          }
+        }
+      }
+    }
+  ]
 }

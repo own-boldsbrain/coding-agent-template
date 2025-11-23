@@ -1,14 +1,14 @@
 'use client'
 
-import { Task } from '@/lib/db/schema'
-import { PageHeader } from '@/components/page-header'
-import { TaskActions } from '@/components/task-actions'
 import { useTasks } from '@/components/app-layout'
 import { User } from '@/components/auth/user'
+import { GitHubStarsButton } from '@/components/github-stars-button'
+import { PageHeader } from '@/components/page-header'
+import { TaskActions } from '@/components/task-actions'
 import { Button } from '@/components/ui/button'
 import { VERCEL_DEPLOY_URL } from '@/lib/constants'
+import type { Task } from '@/lib/db/schema'
 import type { Session } from '@/lib/session/types'
-import { GitHubStarsButton } from '@/components/github-stars-button'
 
 interface TaskPageHeaderProps {
   task: Task

@@ -1,9 +1,11 @@
-import { Sandbox } from '../index'
-import { runCommandInSandbox, runInProject, PROJECT_DIR } from '../commands'
-import { AgentExecutionResult } from '../types'
+/** @format */
+
+import type { connectors } from '@/lib/db/schema'
 import { redactSensitiveInfo } from '@/lib/utils/logging'
-import { TaskLogger } from '@/lib/utils/task-logger'
-import { connectors } from '@/lib/db/schema'
+import type { TaskLogger } from '@/lib/utils/task-logger'
+import { PROJECT_DIR, runCommandInSandbox, runInProject } from '../commands'
+import type { Sandbox } from '../index'
+import type { AgentExecutionResult } from '../types'
 
 type Connector = typeof connectors.$inferSelect
 
@@ -14,7 +16,7 @@ async function runAndLogCommand(sandbox: Sandbox, command: string, args: string[
 
   const result = await runInProject(sandbox, command, args)
 
-  if (result.output && result.output.trim()) {
+  if (result.output?.trim()) {
     await logger.info(redactSensitiveInfo(result.output.trim()))
   }
 
@@ -32,7 +34,7 @@ export async function executeCodexInSandbox(
   selectedModel?: string,
   mcpServers?: Connector[],
   isResumed?: boolean,
-  sessionId?: string,
+  _sessionId?: string,
 ): Promise<AgentExecutionResult> {
   try {
     // Executing Codex CLI with instruction
@@ -40,7 +42,9 @@ export async function executeCodexInSandbox(
     // Check if Codex CLI is already installed (for resumed sandboxes)
     const existingCLICheck = await runCommandInSandbox(sandbox, 'which', ['codex'])
 
-    let installResult: { success: boolean; output?: string; error?: string } = { success: true }
+    let installResult: { success: boolean; output?: string; error?: string } = {
+      success: true,
+    }
 
     if (existingCLICheck.success && existingCLICheck.output?.includes('codex')) {
       // CLI already installed, skip installation
@@ -91,7 +95,9 @@ export async function executeCodexInSandbox(
     const isVercelKey = apiKey?.startsWith('vck_')
 
     if (!apiKey || (!isOpenAIKey && !isVercelKey)) {
-      const errorMsg = `Invalid API key format. Expected to start with "sk-" (OpenAI) or "vck_" (Vercel), but got: "${apiKey?.substring(0, 15) || 'undefined'}"`
+      const errorMsg = `Invalid API key format. Expected to start with "sk-" (OpenAI) or "vck_" (Vercel), but got: "${
+        apiKey?.substring(0, 15) || 'undefined'
+      }"`
 
       if (logger) {
         await logger.error(errorMsg)
@@ -105,7 +111,7 @@ export async function executeCodexInSandbox(
     }
 
     if (logger) {
-      const keyType = isVercelKey ? 'Vercel AI Gateway' : 'OpenAI'
+      const _keyType = isVercelKey ? 'Vercel AI Gateway' : 'OpenAI'
       await logger.info('Using API key for authentication')
     }
 
@@ -130,7 +136,7 @@ export async function executeCodexInSandbox(
     // or require specific authentication setup. Let's try a more comprehensive approach
 
     // First, check if we can get version info
-    const versionTestResult = await sandbox.runCommand({
+    const _versionTestResult = await sandbox.runCommand({
       cmd: 'codex',
       args: ['--version'],
       env: {
@@ -189,7 +195,7 @@ log_requests = true
       // Check if we need experimental RMCP client (for remote servers)
       const hasRemoteServers = mcpServers.some((s) => s.type === 'remote')
       if (hasRemoteServers) {
-        configToml = `experimental_use_rmcp_client = true\n\n` + configToml
+        configToml = `experimental_use_rmcp_client = true\n\n${configToml}`
       }
 
       for (const server of mcpServers) {
@@ -197,7 +203,12 @@ log_requests = true
 
         if (server.type === 'local') {
           // Local STDIO server - parse command string into command and args
-          const commandParts = server.command!.trim().split(/\s+/)
+          const commandValue = server.command?.trim()
+          if (!commandValue) {
+            await logger.error('Missing MCP server command')
+            continue
+          }
+          const commandParts = commandValue.split(/\s+/)
           const executable = commandParts[0]
           const args = commandParts.slice(1)
 
@@ -238,7 +249,7 @@ url = "${server.baseUrl}"
       await logger.info('Creating Codex configuration file...')
     }
 
-    const configSetupResult = await sandbox.runCommand({
+    const _configSetupResult = await sandbox.runCommand({
       cmd: 'sh',
       args: ['-c', `mkdir -p ~/.codex && cat > ~/.codex/config.toml << 'EOF'\n${configToml}EOF`],
       env: {},
@@ -264,13 +275,13 @@ url = "${server.baseUrl}"
     }
 
     // Debug: List files in the current directory before running Codex
-    const lsDebugResult = await runCommandInSandbox(sandbox, 'ls', ['-la'])
+    const _lsDebugResult = await runCommandInSandbox(sandbox, 'ls', ['-la'])
     if (logger) {
       await logger.info('Current directory contents retrieved')
     }
 
     // Debug: Show current working directory
-    const pwdResult = await runCommandInSandbox(sandbox, 'pwd', [])
+    const _pwdResult = await runCommandInSandbox(sandbox, 'pwd', [])
     if (logger) {
       await logger.info('Current working directory retrieved')
     }
@@ -311,7 +322,7 @@ url = "${server.baseUrl}"
     const result = await runInProject(sandbox, 'sh', ['-c', fullCommand])
 
     // Log the output and error results (similar to Claude and Cursor)
-    if (result.output && result.output.trim()) {
+    if (result.output?.trim()) {
       const redactedOutput = redactSensitiveInfo(result.output.trim())
       await logger.info(redactedOutput)
       if (logger) {
@@ -356,15 +367,14 @@ url = "${server.baseUrl}"
         error: undefined,
         sessionId: extractedSessionId, // Include session ID if available
       }
-    } else {
-      return {
-        success: false,
-        error: `Codex CLI failed (exit code ${result.exitCode}): ${result.error || 'No error message'}`,
-        agentResponse: result.output,
-        cliName: 'codex',
-        changesDetected: !!hasChanges,
-        sessionId: extractedSessionId, // Include session ID even on failure
-      }
+    }
+    return {
+      success: false,
+      error: `Codex CLI failed (exit code ${result.exitCode}): ${result.error || 'No error message'}`,
+      agentResponse: result.output,
+      cliName: 'codex',
+      changesDetected: !!hasChanges,
+      sessionId: extractedSessionId, // Include session ID even on failure
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to execute Codex CLI in sandbox'

@@ -1,4 +1,4 @@
-import { SandboxType as Sandbox } from './index'
+import type { SandboxType as Sandbox } from './index'
 
 // Project directory mounted via Docker volume
 export const PROJECT_DIR = '/workspace/project'

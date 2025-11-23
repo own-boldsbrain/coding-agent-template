@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/session/get-server-session'
 import { checkRateLimit } from '@/lib/utils/rate-limit'
+import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {

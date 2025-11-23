@@ -1,19 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server'
+/** @format */
+
 import { Writable } from 'node:stream'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
-import { Sandbox } from '@/lib/sandbox'
-import { getServerSession } from '@/lib/session/get-server-session'
+import { getMaxSandboxDuration } from '@/lib/db/settings'
 import { getGitHubUser } from '@/lib/github/client'
 import { getUserGitHubToken } from '@/lib/github/user-token'
-import { registerSandbox, unregisterSandbox } from '@/lib/sandbox/sandbox-registry'
-import { runCommandInSandbox, runInProject, PROJECT_DIR } from '@/lib/sandbox/commands'
-import { detectPackageManager, installDependencies } from '@/lib/sandbox/package-manager'
+import { Sandbox } from '@/lib/sandbox'
+import { PROJECT_DIR, runCommandInSandbox, runInProject } from '@/lib/sandbox/commands'
 import { createAuthenticatedRepoUrl } from '@/lib/sandbox/config'
-import { createTaskLogger } from '@/lib/utils/task-logger'
-import { getMaxSandboxDuration } from '@/lib/db/settings'
+import { detectPackageManager, installDependencies } from '@/lib/sandbox/package-manager'
 import { detectPortFromRepo } from '@/lib/sandbox/port-detection'
+import { registerSandbox, unregisterSandbox } from '@/lib/sandbox/sandbox-registry'
+import { getServerSession } from '@/lib/session/get-server-session'
+import { createTaskLogger } from '@/lib/utils/task-logger'
+import { eq } from 'drizzle-orm'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
   try {
@@ -257,8 +259,13 @@ export default mergeConfig(userConfig, defineConfig({
                 .toString()
                 .split('\n')
                 .filter((line) => line.trim())
+              let emittedLog = false
               for (const line of lines) {
-                logger.info(`[SERVER] ${line}`).catch(() => {})
+                console.log('[SERVER]', line)
+                emittedLog = true
+              }
+              if (emittedLog) {
+                logger.info('Development server log entry received').catch(() => {})
               }
               callback()
             },
@@ -270,8 +277,13 @@ export default mergeConfig(userConfig, defineConfig({
                 .toString()
                 .split('\n')
                 .filter((line) => line.trim())
+              let emittedLog = false
               for (const line of lines) {
-                logger.info(`[SERVER] ${line}`).catch(() => {})
+                console.error('[SERVER]', line)
+                emittedLog = true
+              }
+              if (emittedLog) {
+                logger.info('Development server log entry received').catch(() => {})
               }
               callback()
             },

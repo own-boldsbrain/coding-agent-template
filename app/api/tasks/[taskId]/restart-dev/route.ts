@@ -1,13 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
+/** @format */
+
 import { Writable } from 'node:stream'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
 import { Sandbox } from '@/lib/sandbox'
-import { getServerSession } from '@/lib/session/get-server-session'
-import { runCommandInSandbox, runInProject, PROJECT_DIR } from '@/lib/sandbox/commands'
+import { PROJECT_DIR, runCommandInSandbox, runInProject } from '@/lib/sandbox/commands'
 import { detectPackageManager } from '@/lib/sandbox/package-manager'
+import { getServerSession } from '@/lib/session/get-server-session'
 import { createTaskLogger } from '@/lib/utils/task-logger'
+import { eq } from 'drizzle-orm'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
   try {
@@ -150,8 +152,13 @@ export default mergeConfig(userConfig, defineConfig({
           .toString()
           .split('\n')
           .filter((line) => line.trim())
+        let emittedLog = false
         for (const line of lines) {
-          logger.info(`[SERVER] ${line}`).catch(() => {})
+          console.log('[SERVER]', line)
+          emittedLog = true
+        }
+        if (emittedLog) {
+          logger.info('Development server log entry received').catch(() => {})
         }
         callback()
       },
@@ -163,8 +170,13 @@ export default mergeConfig(userConfig, defineConfig({
           .toString()
           .split('\n')
           .filter((line) => line.trim())
+        let emittedLog = false
         for (const line of lines) {
-          logger.info(`[SERVER] ${line}`).catch(() => {})
+          console.error('[SERVER]', line)
+          emittedLog = true
+        }
+        if (emittedLog) {
+          logger.info('Development server log entry received').catch(() => {})
         }
         callback()
       },

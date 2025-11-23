@@ -1,7 +1,7 @@
 import { db } from '@/lib/db/client'
-import { tasks, taskMessages } from '@/lib/db/schema'
-import { eq, gte, and, isNull } from 'drizzle-orm'
+import { taskMessages, tasks } from '@/lib/db/schema'
 import { getMaxMessagesPerDay } from '@/lib/db/settings'
+import { and, eq, gte, isNull } from 'drizzle-orm'
 
 export async function checkRateLimit(
   userId: string,

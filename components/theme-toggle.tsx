@@ -1,15 +1,15 @@
 'use client'
 
-import * as React from 'react'
-import { useTheme } from 'next-themes'
-import { Monitor, Moon, Sun } from 'lucide-react'
 import {
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Monitor, Moon, Sun } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import * as React from 'react'
 
 export function ThemeToggle() {
   const { theme = 'system', setTheme } = useTheme()

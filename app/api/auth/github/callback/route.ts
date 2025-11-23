@@ -1,11 +1,11 @@
-import { type NextRequest } from 'next/server'
-import { cookies } from 'next/headers'
-import { db } from '@/lib/db/client'
-import { users, accounts, tasks, connectors, keys } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
-import { nanoid } from 'nanoid'
-import { createGitHubSession, saveSession } from '@/lib/session/create-github'
 import { encrypt } from '@/lib/crypto'
+import { db } from '@/lib/db/client'
+import { accounts, connectors, keys, tasks, users } from '@/lib/db/schema'
+import { createGitHubSession, saveSession } from '@/lib/session/create-github'
+import { and, eq } from 'drizzle-orm'
+import { nanoid } from 'nanoid'
+import { cookies } from 'next/headers'
+import type { NextRequest } from 'next/server'
 
 export async function GET(req: NextRequest): Promise<Response> {
   const code = req.nextUrl.searchParams.get('code')
@@ -13,15 +13,15 @@ export async function GET(req: NextRequest): Promise<Response> {
   const cookieStore = await cookies()
 
   // Check if this is a sign-in flow or connect flow
-  const authMode = cookieStore.get(`github_auth_mode`)?.value ?? null
+  const authMode = cookieStore.get('github_auth_mode')?.value ?? null
   const isSignInFlow = authMode === 'signin'
-  const isConnectFlow = authMode === 'connect'
+  const _isConnectFlow = authMode === 'connect'
 
   // Try both cookie patterns (new unified flow vs legacy oauth flow)
-  const storedState = cookieStore.get(authMode ? `github_auth_state` : `github_oauth_state`)?.value ?? null
+  const storedState = cookieStore.get(authMode ? 'github_auth_state' : 'github_oauth_state')?.value ?? null
   const storedRedirectTo =
-    cookieStore.get(authMode ? `github_auth_redirect_to` : `github_oauth_redirect_to`)?.value ?? null
-  const storedUserId = cookieStore.get(`github_oauth_user_id`)?.value ?? null // Required for connect flow
+    cookieStore.get(authMode ? 'github_auth_redirect_to' : 'github_oauth_redirect_to')?.value ?? null
+  const storedUserId = cookieStore.get('github_oauth_user_id')?.value ?? null // Required for connect flow
 
   // For sign-in flow, we don't need storedUserId
   if (isSignInFlow) {
@@ -134,95 +134,92 @@ export async function GET(req: NextRequest): Promise<Response> {
       await saveSession(response, session)
 
       // Clean up cookies
-      cookieStore.delete(`github_auth_state`)
-      cookieStore.delete(`github_auth_redirect_to`)
-      cookieStore.delete(`github_auth_mode`)
+      cookieStore.delete('github_auth_state')
+      cookieStore.delete('github_auth_redirect_to')
+      cookieStore.delete('github_auth_mode')
 
       return response
-    } else {
-      // CONNECT FLOW: Add GitHub account to existing Vercel user
-      // Encrypt the access token before storing
-      const encryptedToken = encrypt(tokenData.access_token)
-
-      // Check if this GitHub account is already connected somewhere
-      const existingAccount = await db
-        .select()
-        .from(accounts)
-        .where(and(eq(accounts.provider, 'github'), eq(accounts.externalUserId, `${githubUser.id}`)))
-        .limit(1)
-
-      if (existingAccount.length > 0) {
-        const connectedUserId = existingAccount[0].userId
-
-        // If the GitHub account belongs to a different user, we need to merge accounts
-        if (connectedUserId !== storedUserId) {
-          console.log(
-            `[GitHub Callback] Merging accounts: GitHub account ${githubUser.id} belongs to user ${connectedUserId}, connecting to user ${storedUserId}`,
-          )
-
-          // Transfer all tasks, connectors, accounts, and keys from old user to new user
-          await db.update(tasks).set({ userId: storedUserId! }).where(eq(tasks.userId, connectedUserId))
-          await db.update(connectors).set({ userId: storedUserId! }).where(eq(connectors.userId, connectedUserId))
-          await db.update(accounts).set({ userId: storedUserId! }).where(eq(accounts.userId, connectedUserId))
-          await db.update(keys).set({ userId: storedUserId! }).where(eq(keys.userId, connectedUserId))
-
-          // Delete the old user record (this will cascade delete their accounts/keys)
-          await db.delete(users).where(eq(users.id, connectedUserId))
-
-          console.log(
-            `[GitHub Callback] Account merge complete. Old user ${connectedUserId} merged into ${storedUserId}`,
-          )
-
-          // Update the GitHub account token
-          await db
-            .update(accounts)
-            .set({
-              userId: storedUserId!,
-              accessToken: encryptedToken,
-              scope: tokenData.scope,
-              username: githubUser.login,
-              updatedAt: new Date(),
-            })
-            .where(eq(accounts.id, existingAccount[0].id))
-        } else {
-          // Same user, just update the token
-          await db
-            .update(accounts)
-            .set({
-              accessToken: encryptedToken,
-              scope: tokenData.scope,
-              username: githubUser.login,
-              updatedAt: new Date(),
-            })
-            .where(eq(accounts.id, existingAccount[0].id))
-        }
-      } else {
-        // No existing GitHub account connection, create a new one
-        await db.insert(accounts).values({
-          id: nanoid(),
-          userId: storedUserId!,
-          provider: 'github',
-          externalUserId: `${githubUser.id}`, // Store GitHub numeric ID
-          accessToken: encryptedToken,
-          scope: tokenData.scope,
-          username: githubUser.login,
-        })
-      }
-
-      // Clean up cookies (handle both new and legacy cookie names)
-      if (authMode) {
-        cookieStore.delete(`github_auth_state`)
-        cookieStore.delete(`github_auth_redirect_to`)
-        cookieStore.delete(`github_auth_mode`)
-      } else {
-        cookieStore.delete(`github_oauth_state`)
-        cookieStore.delete(`github_oauth_redirect_to`)
-      }
-      cookieStore.delete(`github_oauth_user_id`)
-
-      // Redirect back to app
-      return Response.redirect(new URL(storedRedirectTo, req.nextUrl.origin))
     }
+    // CONNECT FLOW: Add GitHub account to existing Vercel user
+    // Encrypt the access token before storing
+    const encryptedToken = encrypt(tokenData.access_token)
+
+    // Check if this GitHub account is already connected somewhere
+    const existingAccount = await db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.provider, 'github'), eq(accounts.externalUserId, `${githubUser.id}`)))
+      .limit(1)
+
+    if (existingAccount.length > 0) {
+      const connectedUserId = existingAccount[0].userId
+
+      // If the GitHub account belongs to a different user, we need to merge accounts
+      if (connectedUserId !== storedUserId) {
+        console.log(
+          `[GitHub Callback] Merging accounts: GitHub account ${githubUser.id} belongs to user ${connectedUserId}, connecting to user ${storedUserId}`,
+        )
+
+        // Transfer all tasks, connectors, accounts, and keys from old user to new user
+        await db.update(tasks).set({ userId: storedUserId! }).where(eq(tasks.userId, connectedUserId))
+        await db.update(connectors).set({ userId: storedUserId! }).where(eq(connectors.userId, connectedUserId))
+        await db.update(accounts).set({ userId: storedUserId! }).where(eq(accounts.userId, connectedUserId))
+        await db.update(keys).set({ userId: storedUserId! }).where(eq(keys.userId, connectedUserId))
+
+        // Delete the old user record (this will cascade delete their accounts/keys)
+        await db.delete(users).where(eq(users.id, connectedUserId))
+
+        console.log(`[GitHub Callback] Account merge complete. Old user ${connectedUserId} merged into ${storedUserId}`)
+
+        // Update the GitHub account token
+        await db
+          .update(accounts)
+          .set({
+            userId: storedUserId!,
+            accessToken: encryptedToken,
+            scope: tokenData.scope,
+            username: githubUser.login,
+            updatedAt: new Date(),
+          })
+          .where(eq(accounts.id, existingAccount[0].id))
+      } else {
+        // Same user, just update the token
+        await db
+          .update(accounts)
+          .set({
+            accessToken: encryptedToken,
+            scope: tokenData.scope,
+            username: githubUser.login,
+            updatedAt: new Date(),
+          })
+          .where(eq(accounts.id, existingAccount[0].id))
+      }
+    } else {
+      // No existing GitHub account connection, create a new one
+      await db.insert(accounts).values({
+        id: nanoid(),
+        userId: storedUserId!,
+        provider: 'github',
+        externalUserId: `${githubUser.id}`, // Store GitHub numeric ID
+        accessToken: encryptedToken,
+        scope: tokenData.scope,
+        username: githubUser.login,
+      })
+    }
+
+    // Clean up cookies (handle both new and legacy cookie names)
+    if (authMode) {
+      cookieStore.delete('github_auth_state')
+      cookieStore.delete('github_auth_redirect_to')
+      cookieStore.delete('github_auth_mode')
+    } else {
+      cookieStore.delete('github_oauth_state')
+      cookieStore.delete('github_oauth_redirect_to')
+    }
+    cookieStore.delete('github_oauth_user_id')
+
+    // Redirect back to app
+    return Response.redirect(new URL(storedRedirectTo, req.nextUrl.origin))
   } catch (error) {
     console.error('[GitHub Callback] OAuth callback error:', error)
     console.error('[GitHub Callback] Error stack:', error instanceof Error ? error.stack : 'No stack trace')

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { GET, POST } from './route'
 import { NextRequest } from 'next/server'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { GET, POST } from './route'
 
 // Mock dependencies
 vi.mock('@/lib/session/server', () => ({
@@ -39,8 +39,8 @@ vi.mock('@/lib/crypto', () => ({
   decrypt: vi.fn((val) => val.replace('encrypted-', '')),
 }))
 
-import { getSessionFromReq } from '@/lib/session/server'
 import { db } from '@/lib/db/client'
+import { getSessionFromReq } from '@/lib/session/server'
 
 describe('API Keys Route', () => {
   beforeEach(() => {

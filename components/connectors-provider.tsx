@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, createContext, useContext, useCallback } from 'react'
-import { Connector } from '@/lib/db/schema'
+import type { Connector } from '@/lib/db/schema'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 
 interface ConnectorsContextType {
   connectors: Connector[]

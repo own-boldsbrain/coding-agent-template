@@ -1,4 +1,4 @@
-import type { VercelTeam, BillingPlan } from './types'
+import type { BillingPlan, VercelTeam } from './types'
 
 interface PlanInfo {
   plan: BillingPlan

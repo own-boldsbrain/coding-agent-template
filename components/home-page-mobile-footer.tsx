@@ -1,7 +1,7 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
 import { GitHubIcon } from '@/components/icons/github-icon'
+import { Button } from '@/components/ui/button'
 import { VERCEL_DEPLOY_URL } from '@/lib/constants'
 import { formatAbbreviatedNumber } from '@/lib/utils/format-number'
 

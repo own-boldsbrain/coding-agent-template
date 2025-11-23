@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import * as schema from '@/lib/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
-import { Sandbox } from '@vercel/sandbox'
 import { getSandbox } from '@/lib/sandbox/sandbox-registry'
 import { getServerSession } from '@/lib/session/get-server-session'
+import { Sandbox } from '@vercel/sandbox'
+import { and, eq, isNull } from 'drizzle-orm'
+import { type NextRequest, NextResponse } from 'next/server'
 
 const { tasks } = schema
 
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       try {
         const pwdOutput = await pwdResult.stdout()
-        if (pwdOutput && pwdOutput.trim()) {
+        if (pwdOutput?.trim()) {
           actualCwd = pwdOutput.trim()
         }
       } catch {
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         if (pathPart.startsWith('/')) {
           dir = pathPart
         } else if (pathPart.startsWith('~/')) {
-          dir = '/home/vercel-sandbox/' + pathPart.substring(2)
+          dir = `/home/vercel-sandbox/${pathPart.substring(2)}`
         } else {
           dir = `${actualCwd}/${pathPart}`
         }
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       // Escape directory path for safe shell interpolation
       // This prevents shell injection attacks when dir contains special characters
-      const escapedDir = "'" + dir.replace(/'/g, "'\\''") + "'"
+      const escapedDir = `'${dir.replace(/'/g, "'\\''")}'`
       // Get directory listing
       const lsCommand = `cd ${escapedDir} 2>/dev/null && ls -1ap 2>/dev/null || echo ""`
       const result = await sandbox.runCommand('sh', ['-c', lsCommand])
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const files = stdout
         .trim()
         .split('\n')
-        .filter((f) => f && f.toLowerCase().startsWith(prefix.toLowerCase()))
+        .filter((f) => f?.toLowerCase().startsWith(prefix.toLowerCase()))
         .map((f) => ({
           name: f,
           isDirectory: f.endsWith('/'),

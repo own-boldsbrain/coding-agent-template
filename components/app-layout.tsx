@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect, createContext, useContext, useCallback } from 'react'
+import { ConnectorsProvider } from '@/components/connectors-provider'
 import { TaskSidebar } from '@/components/task-sidebar'
-import { Task } from '@/lib/db/schema'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import type { Task } from '@/lib/db/schema'
+import { getSidebarOpen, getSidebarWidth, setSidebarOpen, setSidebarWidth } from '@/lib/utils/cookies'
 import { Plus, Trash2 } from 'lucide-react'
-import Link from 'next/link'
-import { getSidebarWidth, setSidebarWidth, getSidebarOpen, setSidebarOpen } from '@/lib/utils/cookies'
 import { nanoid } from 'nanoid'
-import { ConnectorsProvider } from '@/components/connectors-provider'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 
 interface AppLayoutProps {
   children: React.ReactNode

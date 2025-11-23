@@ -8,7 +8,7 @@ import { Sandbox } from './index'
 // Temporary in-memory tracking for current execution only
 const activeSandboxes = new Map<string, Sandbox>()
 
-export function registerSandbox(taskId: string, sandbox: Sandbox, _keepAlive: boolean = false): void {
+export function registerSandbox(taskId: string, sandbox: Sandbox, _keepAlive = false): void {
   // Note: keepAlive parameter kept for backward compatibility but not used
   // Real persistence happens via sandboxId in database
   activeSandboxes.set(taskId, sandbox)

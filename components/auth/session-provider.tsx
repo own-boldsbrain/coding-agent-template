@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useSetAtom } from 'jotai'
-import { sessionAtom, sessionInitializedAtom } from '@/lib/atoms/session'
 import { githubConnectionAtom, githubConnectionInitializedAtom } from '@/lib/atoms/github-connection'
-import type { SessionUserInfo } from '@/lib/session/types'
 import type { GitHubConnection } from '@/lib/atoms/github-connection'
+import { sessionAtom, sessionInitializedAtom } from '@/lib/atoms/session'
+import type { SessionUserInfo } from '@/lib/session/types'
+import { useSetAtom } from 'jotai'
+import { useEffect } from 'react'
 
 export function SessionProvider() {
   const setSession = useSetAtom(sessionAtom)

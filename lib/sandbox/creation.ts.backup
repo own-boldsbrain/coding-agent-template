@@ -457,8 +457,13 @@ fi
                   .toString()
                   .split('\n')
                   .filter((line) => line.trim())
+                let emittedLog = false
                 for (const line of lines) {
-                  logger.info(`[SERVER] ${line}`).catch(() => {})
+                  console.log('[SERVER]', line)
+                  emittedLog = true
+                }
+                if (emittedLog) {
+                  logger.info('Development server log entry received').catch(() => {})
                 }
                 callback()
               },
@@ -470,8 +475,13 @@ fi
                   .toString()
                   .split('\n')
                   .filter((line) => line.trim())
+                let emittedLog = false
                 for (const line of lines) {
-                  logger.info(`[SERVER] ${line}`).catch(() => {})
+                  console.error('[SERVER]', line)
+                  emittedLog = true
+                }
+                if (emittedLog) {
+                  logger.info('Development server log entry received').catch(() => {})
                 }
                 callback()
               },

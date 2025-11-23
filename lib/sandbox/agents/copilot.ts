@@ -1,13 +1,15 @@
-import { Sandbox } from '../index'
+/** @format */
+
 import { Writable } from 'node:stream'
-import { runCommandInSandbox, runInProject, PROJECT_DIR } from '../commands'
-import { AgentExecutionResult } from '../types'
-import { redactSensitiveInfo } from '@/lib/utils/logging'
-import { TaskLogger } from '@/lib/utils/task-logger'
-import { connectors, taskMessages } from '@/lib/db/schema'
 import { db } from '@/lib/db/client'
-import { eq } from 'drizzle-orm'
+import { type connectors, taskMessages } from '@/lib/db/schema'
 import { generateId } from '@/lib/utils/id'
+import { redactSensitiveInfo } from '@/lib/utils/logging'
+import type { TaskLogger } from '@/lib/utils/task-logger'
+import { eq } from 'drizzle-orm'
+import { PROJECT_DIR, runCommandInSandbox, runInProject } from '../commands'
+import type { Sandbox } from '../index'
+import type { AgentExecutionResult } from '../types'
 import { CopilotOutputParser } from './copilot-parser'
 
 type Connector = typeof connectors.$inferSelect
@@ -19,7 +21,7 @@ async function runAndLogCommand(sandbox: Sandbox, command: string, args: string[
 
   const result = await runInProject(sandbox, command, args)
 
-  if (result.output && result.output.trim()) {
+  if (result.output?.trim()) {
     await logger.info(redactSensitiveInfo(result.output.trim()))
   }
 
@@ -109,8 +111,19 @@ export async function executeCopilotInSandbox(
       const mcpConfig: {
         mcpServers: Record<
           string,
-          | { type: 'http'; url: string; headers?: Record<string, string>; tools: string[] }
-          | { type: 'stdio'; command: string; args?: string[]; env?: Record<string, string>; tools: string[] }
+          | {
+              type: 'http'
+              url: string
+              headers?: Record<string, string>
+              tools: string[]
+            }
+          | {
+              type: 'stdio'
+              command: string
+              args?: string[]
+              env?: Record<string, string>
+              tools: string[]
+            }
         >
       } = {
         mcpServers: {},
@@ -121,7 +134,12 @@ export async function executeCopilotInSandbox(
 
         if (server.type === 'local') {
           // Local STDIO server - parse command string into command and args
-          const commandParts = server.command!.trim().split(/\s+/)
+          const commandValue = server.command?.trim()
+          if (!commandValue) {
+            await logger.error('Missing MCP server command')
+            continue
+          }
+          const commandParts = commandValue.split(/\s+/)
           const executable = commandParts[0]
           const args = commandParts.slice(1)
 
@@ -130,7 +148,7 @@ export async function executeCopilotInSandbox(
           if (server.env) {
             try {
               envObject = JSON.parse(server.env)
-            } catch (e) {
+            } catch (_e) {
               await logger.info('Warning: Failed to parse env for MCP server')
             }
           }
@@ -153,7 +171,12 @@ export async function executeCopilotInSandbox(
             headers['X-Client-ID'] = server.oauthClientId
           }
 
-          const httpConfig: { type: 'http'; url: string; headers?: Record<string, string>; tools: string[] } = {
+          const httpConfig: {
+            type: 'http'
+            url: string
+            headers?: Record<string, string>
+            tools: string[]
+          } = {
             type: 'http',
             url: server.baseUrl!,
             tools: [], // Empty array to allow all tools
@@ -196,15 +219,13 @@ EOF`
 
     // Create custom writable streams to capture the output
 
-    interface WriteCallback {
-      (error?: Error | null): void
-    }
+    type WriteCallback = (error?: Error | null) => void
 
     let extractedSessionId: string | undefined
     const parser = new CopilotOutputParser()
 
     const captureStdout = new Writable({
-      write(chunk: Buffer | string, encoding: BufferEncoding, callback: WriteCallback) {
+      write(chunk: Buffer | string, _encoding: BufferEncoding, callback: WriteCallback) {
         const data = chunk.toString()
 
         // Only capture raw output if we're NOT streaming to database
@@ -223,7 +244,7 @@ EOF`
             db.update(taskMessages)
               .set({ content: accumulatedContent })
               .where(eq(taskMessages.id, agentMessageId))
-              .catch((err: Error) => {
+              .catch((_err: Error) => {
                 // Silently ignore update errors to avoid flooding logs
               })
           }
@@ -234,7 +255,7 @@ EOF`
     })
 
     const captureStderr = new Writable({
-      write(chunk: Buffer | string, encoding: BufferEncoding, callback: WriteCallback) {
+      write(chunk: Buffer | string, _encoding: BufferEncoding, callback: WriteCallback) {
         capturedError += chunk.toString()
         callback()
       },
@@ -298,7 +319,7 @@ EOF`
       if (logger) {
         await logger.info('GitHub Copilot CLI execution completed')
       }
-    } catch (error) {
+    } catch (_error) {
       // Command may exit with non-zero code, but that's okay
       // We'll check for changes below
       if (logger) {
@@ -314,12 +335,12 @@ EOF`
     }
 
     // Log the output and error results
-    if (result.output && result.output.trim() && !agentMessageId) {
+    if (result.output?.trim() && !agentMessageId) {
       const redactedOutput = redactSensitiveInfo(result.output.trim())
       await logger.info(redactedOutput)
     }
 
-    if (result.error && result.error.trim()) {
+    if (result.error?.trim()) {
       const redactedError = redactSensitiveInfo(result.error)
       await logger.error(redactedError)
     }

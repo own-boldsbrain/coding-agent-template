@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
 import { getOctokit } from '@/lib/github/client'
-import { getServerSession } from '@/lib/session/get-server-session'
 import { PROJECT_DIR } from '@/lib/sandbox/commands'
+import { getServerSession } from '@/lib/session/get-server-session'
 import type { Octokit } from '@octokit/rest'
+import { and, eq, isNull } from 'drizzle-orm'
+import { type NextRequest, NextResponse } from 'next/server'
 
 function getLanguageFromFilename(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase()
@@ -205,7 +205,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         }
 
         // Fetch latest from remote to ensure we have up-to-date remote refs
-        const fetchResult = await sandbox.runCommand({
+        const _fetchResult = await sandbox.runCommand({
           cmd: 'git',
           args: ['fetch', 'origin', task.branchName],
           cwd: PROJECT_DIR,
@@ -270,7 +270,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           return NextResponse.json({ error: 'Failed to get local diff' }, { status: 500 })
         }
 
-        const diffOutput = await diffResult.stdout()
+        const _diffOutput = await diffResult.stdout()
 
         // Get old content (remote branch version)
         const oldContentResult = await sandbox.runCommand({
@@ -357,7 +357,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       // Get file content from both base and head commits
       let oldContent = ''
       let newContent = ''
-      let oldIsBase64 = false
+      let _oldIsBase64 = false
       let newIsBase64 = false
       let baseRef = 'main'
       let headRef = task.branchName
@@ -398,7 +398,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       try {
         const result = await getFileContent(octokit, owner, repo, filename, baseRef, isImage)
         oldContent = result.content
-        oldIsBase64 = result.isBase64
+        _oldIsBase64 = result.isBase64
       } catch (error: unknown) {
         if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
           // Try master if main doesn't work (only if we're using default branch names)
@@ -406,7 +406,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             try {
               const result = await getFileContent(octokit, owner, repo, filename, 'master', isImage)
               oldContent = result.content
-              oldIsBase64 = result.isBase64
+              _oldIsBase64 = result.isBase64
               baseRef = 'master'
             } catch (masterError: unknown) {
               if (
@@ -421,12 +421,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
               }
               // File doesn't exist in base (could be a new file)
               oldContent = ''
-              oldIsBase64 = false
+              _oldIsBase64 = false
             }
           } else {
             // File doesn't exist at this commit (new file)
             oldContent = ''
-            oldIsBase64 = false
+            _oldIsBase64 = false
           }
         } else {
           throw error

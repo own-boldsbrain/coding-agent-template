@@ -1,14 +1,16 @@
-import { Sandbox } from '../index'
+/** @format */
+
 import { Writable } from 'node:stream'
-import { runCommandInSandbox, runInProject, PROJECT_DIR } from '../commands'
-import { AgentExecutionResult } from '../types'
-import { redactSensitiveInfo } from '@/lib/utils/logging'
-import { TaskLogger } from '@/lib/utils/task-logger'
-import { connectors, taskMessages } from '@/lib/db/schema'
 import { db } from '@/lib/db/client'
-import { eq } from 'drizzle-orm'
-import { CursorOutputParser } from './cursor-parser'
+import { type connectors, taskMessages } from '@/lib/db/schema'
 import { generateId } from '@/lib/utils/id'
+import { redactSensitiveInfo } from '@/lib/utils/logging'
+import type { TaskLogger } from '@/lib/utils/task-logger'
+import { eq } from 'drizzle-orm'
+import { PROJECT_DIR, runCommandInSandbox, runInProject } from '../commands'
+import type { Sandbox } from '../index'
+import type { AgentExecutionResult } from '../types'
+import { CursorOutputParser } from './cursor-parser'
 
 type Connector = typeof connectors.$inferSelect
 
@@ -19,7 +21,7 @@ async function runAndLogCommandRoot(sandbox: Sandbox, command: string, args: str
 
   const result = await runCommandInSandbox(sandbox, command, args)
 
-  if (result.output && result.output.trim()) {
+  if (result.output?.trim()) {
     await logger.info(redactSensitiveInfo(result.output.trim()))
   }
 
@@ -37,7 +39,7 @@ async function runAndLogCommand(sandbox: Sandbox, command: string, args: string[
 
   const result = await runInProject(sandbox, command, args)
 
-  if (result.output && result.output.trim()) {
+  if (result.output?.trim()) {
     await logger.info(redactSensitiveInfo(result.output.trim()))
   }
 
@@ -69,7 +71,9 @@ export async function executeCursorInSandbox(
       // Don't log this check to avoid cluttering logs
     )
 
-    let cursorInstall: { success: boolean; output?: string; error?: string } = { success: true }
+    let cursorInstall: { success: boolean; output?: string; error?: string } = {
+      success: true,
+    }
 
     if (existingCliCheck.success && existingCliCheck.output?.includes('cursor-agent')) {
       // CLI already installed, skip installation
@@ -114,7 +118,9 @@ export async function executeCursorInSandbox(
 
       // Try alternative installation method (if there's a npm package or direct download)
       // For now, we'll fail gracefully with a more informative error
-      const errorMsg = `Failed to install Cursor CLI: ${cursorInstall.error || 'Installation timed out or failed'}. The Cursor CLI installation script may not be compatible with this sandbox environment.`
+      const errorMsg = `Failed to install Cursor CLI: ${
+        cursorInstall.error || 'Installation timed out or failed'
+      }. The Cursor CLI installation script may not be compatible with this sandbox environment.`
       if (logger) {
         await logger.error(errorMsg)
       }
@@ -198,7 +204,12 @@ export async function executeCursorInSandbox(
 
         if (server.type === 'local') {
           // Local STDIO server - parse command string into command and args
-          const commandParts = server.command!.trim().split(/\s+/)
+          const commandValue = server.command?.trim()
+          if (!commandValue) {
+            await logger.error('Missing MCP server command')
+            continue
+          }
+          const commandParts = commandValue.split(/\s+/)
           const executable = commandParts[0]
           const args = commandParts.slice(1)
 
@@ -207,7 +218,7 @@ export async function executeCursorInSandbox(
           if (server.env) {
             try {
               envObject = JSON.parse(server.env)
-            } catch (e) {
+            } catch (_e) {
               await logger.info('Warning: Failed to parse env for MCP server')
             }
           }
@@ -315,16 +326,14 @@ EOF`
 
     // Create custom writable streams to capture the output
 
-    interface WriteCallback {
-      (error?: Error | null): void
-    }
+    type WriteCallback = (error?: Error | null) => void
 
     let accumulatedContent = ''
     let extractedSessionId: string | undefined
     const parser = new CursorOutputParser()
 
     const captureStdout = new Writable({
-      write(chunk: Buffer | string, encoding: BufferEncoding, callback: WriteCallback) {
+      write(chunk: Buffer | string, _encoding: BufferEncoding, callback: WriteCallback) {
         const data = chunk.toString()
 
         // Only capture raw output if we're NOT streaming to database
@@ -365,7 +374,7 @@ EOF`
     })
 
     const captureStderr = new Writable({
-      write(chunk: Buffer | string, encoding: BufferEncoding, callback: WriteCallback) {
+      write(chunk: Buffer | string, _encoding: BufferEncoding, callback: WriteCallback) {
         capturedError += chunk.toString()
         callback()
       },
@@ -448,12 +457,12 @@ EOF`
 
     // Log the output and error results (similar to Claude)
     // Skip logging raw output when streaming to database (we've already built clean content there)
-    if (result.output && result.output.trim() && !agentMessageId) {
+    if (result.output?.trim() && !agentMessageId) {
       const redactedOutput = redactSensitiveInfo(result.output.trim())
       await logger.info(redactedOutput)
     }
 
-    if (result.error && result.error.trim()) {
+    if (result.error?.trim()) {
       const redactedError = redactSensitiveInfo(result.error)
       await logger.error(redactedError)
     }

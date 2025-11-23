@@ -1,13 +1,12 @@
-import { Sandbox } from '../index'
-import { Writable } from 'stream'
-import { runCommandInSandbox, runInProject, PROJECT_DIR } from '../commands'
-import { AgentExecutionResult } from '../types'
-import { redactSensitiveInfo } from '@/lib/utils/logging'
-import { TaskLogger } from '@/lib/utils/task-logger'
-import { connectors, taskMessages } from '@/lib/db/schema'
+import { Writable } from 'node:stream'
 import { db } from '@/lib/db/client'
+import { type connectors, taskMessages } from '@/lib/db/schema'
+import { redactSensitiveInfo } from '@/lib/utils/logging'
+import type { TaskLogger } from '@/lib/utils/task-logger'
 import { eq } from 'drizzle-orm'
-import { generateId } from '@/lib/utils/id'
+import { PROJECT_DIR, runCommandInSandbox, runInProject } from '../commands'
+import type { Sandbox } from '../index'
+import type { AgentExecutionResult } from '../types'
 
 type Connector = typeof connectors.$inferSelect
 
@@ -25,7 +24,7 @@ async function runAndLogCommand(sandbox: Sandbox, command: string, args: string[
   const result = await runInProject(sandbox, command, args)
 
   // Only try to access properties if result is valid
-  if (result && result.output && result.output.trim()) {
+  if (result?.output?.trim()) {
     const redactedOutput = redactSensitiveInfo(result.output.trim())
     await logger.info(redactedOutput)
     if (logger) {
@@ -117,7 +116,7 @@ export async function installClaudeCLI(
             if (addResult.success) {
               await logger.info('Successfully added local MCP server')
             } else {
-              const redactedError = redactSensitiveInfo(addResult.error || 'Unknown error')
+              const _redactedError = redactSensitiveInfo(addResult.error || 'Unknown error')
               await logger.info('Failed to add MCP server')
             }
           } else {
@@ -138,7 +137,7 @@ export async function installClaudeCLI(
             if (addResult.success) {
               await logger.info('Successfully added remote MCP server')
             } else {
-              const redactedError = redactSensitiveInfo(addResult.error || 'Unknown error')
+              const _redactedError = redactSensitiveInfo(addResult.error || 'Unknown error')
               await logger.info('Failed to add MCP server')
             }
           }
@@ -175,10 +174,9 @@ EOF`
     }
 
     return { success: true }
-  } else {
-    await logger.info('Failed to install Claude CLI')
-    return { success: false }
   }
+  await logger.info('Failed to install Claude CLI')
+  return { success: false }
 }
 
 export async function executeClaudeInSandbox(
@@ -281,7 +279,7 @@ export async function executeClaudeInSandbox(
           await logger.info('Resuming specific Claude chat session')
         }
       } else {
-        fullCommand += ` --resume`
+        fullCommand += ' --resume'
         if (logger) {
           await logger.info('Resuming previous Claude conversation')
         }
@@ -357,7 +355,7 @@ export async function executeClaudeInSandbox(
                     } else if (toolName === 'Bash') {
                       const command = input.command || input.cmd || input.script || 'command'
                       // Truncate long commands
-                      const displayCmd = command.length > 50 ? command.substring(0, 50) + '...' : command
+                      const displayCmd = command.length > 50 ? `${command.substring(0, 50)}...` : command
                       statusMsg = `Running: ${displayCmd}`
                     } else if (toolName === 'Grep') {
                       const pattern = input.pattern || input.regex || input.search || 'pattern'
@@ -407,7 +405,7 @@ export async function executeClaudeInSandbox(
     })
 
     const captureStderr = new Writable({
-      write(chunk, _encoding, callback) {
+      write(_chunk, _encoding, callback) {
         // Capture stderr for error logging
         callback()
       },

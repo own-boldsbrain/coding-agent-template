@@ -1,8 +1,8 @@
-import { type NextRequest } from 'next/server'
-import { cookies } from 'next/headers'
-import { generateState } from 'arctic'
-import { isRelativeUrl } from '@/lib/utils/is-relative-url'
 import { getSessionFromReq } from '@/lib/session/server'
+import { isRelativeUrl } from '@/lib/utils/is-relative-url'
+import { generateState } from 'arctic'
+import { cookies } from 'next/headers'
+import type { NextRequest } from 'next/server'
 
 export async function GET(req: NextRequest): Promise<Response> {
   // Check if user is already authenticated with Vercel
@@ -35,14 +35,14 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   // Store state and redirect URL
   const cookiesToSet: [string, string][] = [
-    [`github_auth_redirect_to`, redirectTo],
-    [`github_auth_state`, state],
-    [`github_auth_mode`, authMode],
+    ['github_auth_redirect_to', redirectTo],
+    ['github_auth_state', state],
+    ['github_auth_mode', authMode],
   ]
 
   // If connecting (user already signed in), store their user ID
   if (!isSignInFlow && session?.user?.id) {
-    cookiesToSet.push([`github_oauth_user_id`, session.user.id])
+    cookiesToSet.push(['github_oauth_user_id', session.user.id])
   }
 
   for (const [key, value] of cookiesToSet) {

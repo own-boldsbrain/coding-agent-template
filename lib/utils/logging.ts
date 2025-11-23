@@ -1,4 +1,4 @@
-import { LogEntry } from '@/lib/db/schema'
+import type { LogEntry } from '@/lib/db/schema'
 
 export type { LogEntry }
 
@@ -54,14 +54,14 @@ export function redactSensitiveInfo(message: string): string {
   })
 
   // Redact JSON field patterns (for teamId, projectId in JSON objects)
-  redacted = redacted.replace(/"(teamId|projectId)"[\s:]*"([^"]+)"/gi, (match, fieldName) => {
+  redacted = redacted.replace(/"(teamId|projectId)"[\s:]*"([^"]+)"/gi, (_match, fieldName) => {
     return `"${fieldName}": "[REDACTED]"`
   })
 
   // Redact environment variable assignments with sensitive values
   redacted = redacted.replace(
     /([A-Z_]*(?:KEY|TOKEN|SECRET|PASSWORD|TEAM_ID|PROJECT_ID)[A-Z_]*)[=\s:]*["']?([a-zA-Z0-9_-]{8,})["']?/gi,
-    (match, varName, value) => {
+    (_match, varName, value) => {
       const redactedValue =
         value.length > 8
           ? `${value.substring(0, 4)}${'*'.repeat(Math.max(8, value.length - 8))}${value.substring(value.length - 4)}`

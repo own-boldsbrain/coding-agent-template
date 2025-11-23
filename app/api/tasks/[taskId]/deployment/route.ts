@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from '@/lib/session/get-server-session'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
 import { getOctokit } from '@/lib/github/client'
+import { getServerSession } from '@/lib/session/get-server-session'
+import { and, eq, isNull } from 'drizzle-orm'
+import { type NextRequest, NextResponse } from 'next/server'
 
 // Helper function to convert Vercel feedback URL to actual deployment URL
 function convertFeedbackUrlToDeploymentUrl(url: string): string {
@@ -14,7 +14,7 @@ function convertFeedbackUrlToDeploymentUrl(url: string): string {
   return url
 }
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
   try {
     const session = await getServerSession()
     if (!session?.user?.id) {
@@ -274,7 +274,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
               status.context?.toLowerCase().includes('vercel') && status.state === 'success' && status.target_url,
           )
 
-          if (vercelStatus && vercelStatus.target_url) {
+          if (vercelStatus?.target_url) {
             // Convert feedback URL to actual deployment URL if needed
             const previewUrl = convertFeedbackUrlToDeploymentUrl(vercelStatus.target_url)
             // Store the preview URL in the database

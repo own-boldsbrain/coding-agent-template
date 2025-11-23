@@ -1,6 +1,8 @@
-import type { SandboxType as Sandbox } from './index'
+/** @format */
+
+import type { TaskLogger } from '@/lib/utils/task-logger'
 import { runCommandInSandbox, runInProject } from './commands'
-import { TaskLogger } from '@/lib/utils/task-logger'
+import type { SandboxType as Sandbox } from './index'
 
 export async function pushChangesToBranch(
   sandbox: Sandbox,
@@ -25,7 +27,7 @@ export async function pushChangesToBranch(
       await logger.info('Failed to add changes')
       if (addResult.error) {
         console.error('Git add error details:', addResult.error)
-        await logger.error(`Git add failed: ${addResult.error}`)
+        await logger.error('Git add failed')
       }
       return { success: false }
     }
@@ -37,7 +39,7 @@ export async function pushChangesToBranch(
       await logger.info('Failed to commit changes')
       if (commitResult.error) {
         console.error('Commit error details:', commitResult.error)
-        await logger.error(`Commit failed: ${commitResult.error}`)
+        await logger.error('Commit failed')
       }
       return { success: false }
     }
@@ -50,23 +52,22 @@ export async function pushChangesToBranch(
     if (pushResult.success) {
       await logger.info('Successfully pushed changes to branch')
       return { success: true }
-    } else {
-      const errorMsg = pushResult.error || 'Unknown error'
-      await logger.info('Failed to push to branch')
-
-      // Check if it's a permission issue
-      if (errorMsg.includes('Permission') || errorMsg.includes('access_denied') || errorMsg.includes('403')) {
-        await logger.info(
-          'Note: This appears to be a permission issue. The changes were committed locally but could not be pushed.',
-        )
-        await logger.info('You may need to check repository permissions or authentication tokens.')
-      }
-
-      // Still return success since the work was completed, just couldn't push
-      return { success: true, pushFailed: true }
     }
+    const errorMsg = pushResult.error || 'Unknown error'
+    await logger.info('Failed to push to branch')
+
+    // Check if it's a permission issue
+    if (errorMsg.includes('Permission') || errorMsg.includes('access_denied') || errorMsg.includes('403')) {
+      await logger.info(
+        'Note: This appears to be a permission issue. The changes were committed locally but could not be pushed.',
+      )
+      await logger.info('You may need to check repository permissions or authentication tokens.')
+    }
+
+    // Still return success since the work was completed, just couldn't push
+    return { success: true, pushFailed: true }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const _errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
     await logger.info('Error pushing changes')
     return { success: false }
   }

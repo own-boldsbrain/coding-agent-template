@@ -21,8 +21,8 @@ export class CopilotOutputParser {
           }
 
           // Append each line to accumulated content
-          this.accumulatedContent += line + '\n'
-          newContent += line + '\n'
+          this.accumulatedContent += `${line}\n`
+          newContent += `${line}\n`
         }
       }
     }

@@ -1,11 +1,11 @@
 import 'server-only'
 
+import { decrypt } from '@/lib/crypto'
 import { db } from '@/lib/db/client'
-import { users, accounts } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { accounts, users } from '@/lib/db/schema'
 import { getServerSession } from '@/lib/session/get-server-session'
 import { getSessionFromReq } from '@/lib/session/server'
-import { decrypt } from '@/lib/crypto'
+import { and, eq } from 'drizzle-orm'
 import type { NextRequest } from 'next/server'
 
 /**

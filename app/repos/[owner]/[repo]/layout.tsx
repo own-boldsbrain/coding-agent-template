@@ -1,6 +1,6 @@
 import { RepoLayout } from '@/components/repo-layout'
-import { getServerSession } from '@/lib/session/get-server-session'
 import { getGitHubStars } from '@/lib/github-stars'
+import { getServerSession } from '@/lib/session/get-server-session'
 
 interface LayoutPageProps {
   params: Promise<{

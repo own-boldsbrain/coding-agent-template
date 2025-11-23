@@ -1,8 +1,8 @@
-import type { NextRequest } from 'next/server'
-import { getSessionFromReq } from '@/lib/session/server'
-import { isRelativeUrl } from '@/lib/utils/is-relative-url'
 import { saveSession } from '@/lib/session/create-github'
 import { getOAuthToken } from '@/lib/session/get-oauth-token'
+import { getSessionFromReq } from '@/lib/session/server'
+import { isRelativeUrl } from '@/lib/utils/is-relative-url'
+import type { NextRequest } from 'next/server'
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromReq(req)

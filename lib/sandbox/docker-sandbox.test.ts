@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { DockerSandbox } from './docker-sandbox'
 import { exec } from 'node:child_process'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { DockerSandbox } from './docker-sandbox'
 
 vi.mock('node:child_process', () => {
   const exec = vi.fn()

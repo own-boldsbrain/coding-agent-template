@@ -1,21 +1,23 @@
+/** @format */
+
 'use client'
 
-import { useState, useEffect } from 'react'
-import { TaskForm } from '@/components/task-form'
-import { HomePageHeader } from '@/components/home-page-header'
-import { toast } from 'sonner'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useTasks } from '@/components/app-layout'
-import { setSelectedOwner, setSelectedRepo } from '@/lib/utils/cookies'
-import type { Session } from '@/lib/session/types'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { redirectToSignIn } from '@/lib/session/redirect-to-sign-in'
-import { GitHubIcon } from '@/components/icons/github-icon'
-import { getEnabledAuthProviders } from '@/lib/auth/providers'
-import { useSetAtom } from 'jotai'
-import { taskPromptAtom } from '@/lib/atoms/task'
+import { HomePageHeader } from '@/components/home-page-header'
 import { HomePageMobileFooter } from '@/components/home-page-mobile-footer'
+import { GitHubIcon } from '@/components/icons/github-icon'
+import { TaskForm } from '@/components/task-form'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { taskPromptAtom } from '@/lib/atoms/task'
+import { getEnabledAuthProviders } from '@/lib/auth/providers'
+import { redirectToSignIn } from '@/lib/session/redirect-to-sign-in'
+import type { Session } from '@/lib/session/types'
+import { setSelectedOwner, setSelectedRepo } from '@/lib/utils/cookies'
+import { useSetAtom } from 'jotai'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 interface HomePageContentProps {
   initialSelectedOwner?: string
@@ -144,13 +146,14 @@ export function HomePageContent({
 
     setIsSubmitting(true)
 
+    const selectedModels = data.selectedModels?.filter(Boolean) ?? []
     // Check if this is multi-agent mode with multiple models selected
-    const isMultiAgent = data.selectedAgent === 'multi-agent' && data.selectedModels && data.selectedModels.length > 0
+    const isMultiAgent = data.selectedAgent === 'multi-agent' && selectedModels.length > 0
 
     if (isMultiAgent) {
       // Create multiple tasks, one for each selected model
       const taskIds: string[] = []
-      const tasksData = data.selectedModels!.map((modelValue) => {
+      const tasksData = selectedModels.map((modelValue) => {
         // Parse agent:model format
         const [agent, model] = modelValue.split(':')
         const { id } = addTaskOptimistically({
@@ -175,7 +178,10 @@ export function HomePageContent({
       })
 
       // Navigate to the first task
-      router.push(`/tasks/${taskIds[0]}`)
+      const firstTaskId = taskIds[0]
+      if (firstTaskId) {
+        router.push(`/tasks/${firstTaskId}`)
+      }
 
       try {
         // Create all tasks in parallel
@@ -312,19 +318,12 @@ export function HomePageContent({
                       fill="none"
                       viewBox="0 0 24 24"
                     >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path
                         className="opacity-75"
                         fill="currentColor"
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
+                      />
                     </svg>
                     Loading...
                   </>

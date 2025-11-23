@@ -1,15 +1,15 @@
 'use client'
 
-import { Task, LogEntry } from '@/lib/db/schema'
-import { Button } from '@/components/ui/button'
-import { Copy, Check, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useState, useEffect, useRef } from 'react'
-import { toast } from 'sonner'
 import { useTasks } from '@/components/app-layout'
-import { getLogsPaneHeight, setLogsPaneHeight, getLogsPaneCollapsed, setLogsPaneCollapsed } from '@/lib/utils/cookies'
-import { Terminal, TerminalRef } from '@/components/terminal'
+import { Terminal, type TerminalRef } from '@/components/terminal'
+import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import type { LogEntry, Task } from '@/lib/db/schema'
+import { cn } from '@/lib/utils'
+import { getLogsPaneCollapsed, getLogsPaneHeight, setLogsPaneCollapsed, setLogsPaneHeight } from '@/lib/utils/cookies'
+import { Check, ChevronDown, ChevronUp, Copy, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 interface LogsPaneProps {
   task: Task
@@ -367,7 +367,6 @@ export function LogsPane({ task, onHeightChange }: LogsPaneProps) {
                   return 'text-red-400'
                 case 'success':
                   return 'text-green-400'
-                case 'info':
                 default:
                   return 'text-white'
               }

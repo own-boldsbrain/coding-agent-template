@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 
 const ALGORITHM = 'aes-256-cbc'
 const IV_LENGTH = 16
@@ -58,6 +58,6 @@ export const decrypt = (encryptedText: string): string => {
 
     return decrypted.toString('utf8')
   } catch (error) {
-    throw new Error('Failed to decrypt: ' + (error instanceof Error ? error.message : 'unknown error'))
+    throw new Error(`Failed to decrypt: ${error instanceof Error ? error.message : 'unknown error'}`)
   }
 }

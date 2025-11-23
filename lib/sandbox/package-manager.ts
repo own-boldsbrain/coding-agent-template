@@ -1,6 +1,6 @@
-import type { SandboxType as Sandbox } from './index'
+import type { TaskLogger } from '@/lib/utils/task-logger'
 import { runInProject } from './commands'
-import { TaskLogger } from '@/lib/utils/task-logger'
+import type { SandboxType as Sandbox } from './index'
 
 // Helper function to detect package manager based on lock files
 export async function detectPackageManager(sandbox: Sandbox, logger: TaskLogger): Promise<'pnpm' | 'yarn' | 'npm'> {
@@ -38,7 +38,7 @@ export async function installDependencies(
   let logMessage: string
 
   switch (packageManager) {
-    case 'pnpm':
+    case 'pnpm': {
       // Configure pnpm to use /tmp/pnpm-store to avoid large files in project
       const configStore = await runInProject(sandbox, 'pnpm', ['config', 'set', 'store-dir', '/tmp/pnpm-store'])
       if (!configStore.success) {
@@ -50,6 +50,7 @@ export async function installDependencies(
       installCommand = ['pnpm', 'install', '--frozen-lockfile']
       logMessage = 'Attempting pnpm install'
       break
+    }
     case 'yarn':
       installCommand = ['yarn', 'install', '--frozen-lockfile']
       logMessage = 'Attempting yarn install'
@@ -67,19 +68,18 @@ export async function installDependencies(
   if (installResult.success) {
     await logger.info('Node.js dependencies installed')
     return { success: true }
-  } else {
-    await logger.error('Package manager install failed')
-
-    if (installResult.exitCode !== undefined) {
-      await logger.error('Install failed with exit code')
-      if (installResult.output) await logger.error('Install stdout available')
-      if (installResult.error) await logger.error('Install stderr available')
-    } else {
-      await logger.error('Install error occurred')
-    }
-
-    return { success: false, error: installResult.error }
   }
+  await logger.error('Package manager install failed')
+
+  if (installResult.exitCode !== undefined) {
+    await logger.error('Install failed with exit code')
+    if (installResult.output) await logger.error('Install stdout available')
+    if (installResult.error) await logger.error('Install stderr available')
+  } else {
+    await logger.error('Install error occurred')
+  }
+
+  return { success: false, error: installResult.error }
 }
 
 /**

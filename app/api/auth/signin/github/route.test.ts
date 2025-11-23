@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { GET } from './route'
 import { NextRequest } from 'next/server'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { GET } from './route'
 
 // Mock dependencies
 vi.mock('next/headers', () => ({
@@ -15,8 +15,8 @@ vi.mock('@/lib/session/server', () => ({
   getSessionFromReq: vi.fn(),
 }))
 
-import { cookies } from 'next/headers'
 import { getSessionFromReq } from '@/lib/session/server'
+import { cookies } from 'next/headers'
 
 describe('GET /api/auth/signin/github', () => {
   const originalEnv = process.env

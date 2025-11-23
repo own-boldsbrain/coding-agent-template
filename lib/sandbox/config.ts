@@ -1,5 +1,5 @@
 export function validateEnvironmentVariables(
-  selectedAgent: string = 'claude',
+  selectedAgent = 'claude',
   githubToken?: string | null,
   apiKeys?: {
     OPENAI_API_KEY?: string

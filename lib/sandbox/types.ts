@@ -1,6 +1,5 @@
-import { Sandbox } from './index'
+import type { LogEntry } from '@/lib/db/schema'
 import type { SandboxType } from './index'
-import { LogEntry } from '@/lib/db/schema'
 
 export interface SandboxConfig {
   taskId: string

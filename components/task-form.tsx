@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
+import { useConnectors } from '@/components/connectors-provider'
+import { ConnectorDialog } from '@/components/connectors/manage-connectors'
+import { Claude, Codex, Copilot, Cursor, DeepSeek, Gemini, OpenCode, Qwen } from '@/components/logos'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,18 +13,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Loader2, ArrowUp, Settings, X, Cable, Users } from 'lucide-react'
-import { Claude, Codex, Copilot, Cursor, Gemini, OpenCode, Qwen, DeepSeek } from '@/components/logos'
-import { setInstallDependencies, setMaxDuration, setKeepAlive } from '@/lib/utils/cookies'
-import { useConnectors } from '@/components/connectors-provider'
-import { ConnectorDialog } from '@/components/connectors/manage-connectors'
-import { toast } from 'sonner'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { taskPromptAtom } from '@/lib/atoms/task'
 import { lastSelectedAgentAtom, lastSelectedModelAtomFamily } from '@/lib/atoms/agent-selection'
 import { githubReposAtomFamily } from '@/lib/atoms/github-cache'
+import { taskPromptAtom } from '@/lib/atoms/task'
+import { setInstallDependencies, setKeepAlive, setMaxDuration } from '@/lib/utils/cookies'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { ArrowUp, Cable, Loader2, Settings, Users, X } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 interface GitHubRepo {
   name: string
@@ -137,7 +137,7 @@ const DEFAULT_MODELS = {
 } as const
 
 // API key requirements for each agent
-const AGENT_API_KEY_REQUIREMENTS: Record<string, Provider[]> = {
+const _AGENT_API_KEY_REQUIREMENTS: Record<string, Provider[]> = {
   claude: ['anthropic'],
   codex: ['aigateway'], // Uses AI Gateway for OpenAI proxy
   copilot: [], // Uses user's GitHub account token automatically
@@ -151,7 +151,7 @@ const AGENT_API_KEY_REQUIREMENTS: Record<string, Provider[]> = {
 type Provider = 'openai' | 'gemini' | 'cursor' | 'anthropic' | 'aigateway'
 
 // Helper to determine which API key is needed for opencode based on model
-const getOpenCodeRequiredKeys = (model: string): Provider[] => {
+const _getOpenCodeRequiredKeys = (model: string): Provider[] => {
   // Check if it's an Anthropic model (claude models)
   if (model.includes('claude') || model.includes('sonnet') || model.includes('opus')) {
     return ['anthropic']
@@ -694,7 +694,7 @@ export function TaskForm({
                             </Label>
                             <Select
                               value={maxDuration.toString()}
-                              onValueChange={(value) => updateMaxDuration(parseInt(value))}
+                              onValueChange={(value) => updateMaxDuration(Number.parseInt(value))}
                             >
                               <SelectTrigger id="max-duration" className="w-full h-8">
                                 <SelectValue />

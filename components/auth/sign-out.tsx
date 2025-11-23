@@ -1,6 +1,9 @@
 'use client'
 
-import type { Session } from '@/lib/session/types'
+import { ApiKeysDialog } from '@/components/api-keys-dialog'
+import { GitHubIcon } from '@/components/icons/github-icon'
+import { SandboxesDialog } from '@/components/sandboxes-dialog'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -9,17 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { redirectToSignOut } from '@/lib/session/redirect-to-sign-out'
-import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
-import { useSetAtom } from 'jotai'
 import { sessionAtom } from '@/lib/atoms/session'
-import { GitHubIcon } from '@/components/icons/github-icon'
-import { ApiKeysDialog } from '@/components/api-keys-dialog'
-import { SandboxesDialog } from '@/components/sandboxes-dialog'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { redirectToSignOut } from '@/lib/session/redirect-to-sign-out'
+import type { Session } from '@/lib/session/types'
+import { useSetAtom } from 'jotai'
 import { Key, Server } from 'lucide-react'
-import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 interface RateLimitInfo {
   used: number

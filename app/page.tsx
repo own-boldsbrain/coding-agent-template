@@ -1,8 +1,8 @@
-import { cookies } from 'next/headers'
 import { HomePageContent } from '@/components/home-page-content'
-import { getServerSession } from '@/lib/session/get-server-session'
-import { getGitHubStars } from '@/lib/github-stars'
 import { getMaxSandboxDuration } from '@/lib/db/settings'
+import { getGitHubStars } from '@/lib/github-stars'
+import { getServerSession } from '@/lib/session/get-server-session'
+import { cookies } from 'next/headers'
 
 export default async function Home() {
   const cookieStore = await cookies()
@@ -15,7 +15,7 @@ export default async function Home() {
 
   // Get max sandbox duration for this user (user-specific > global > env var)
   const maxSandboxDuration = await getMaxSandboxDuration(session?.user?.id)
-  const maxDuration = parseInt(cookieStore.get('max-duration')?.value || maxSandboxDuration.toString(), 10)
+  const maxDuration = Number.parseInt(cookieStore.get('max-duration')?.value || maxSandboxDuration.toString(), 10)
 
   const stars = await getGitHubStars()
 

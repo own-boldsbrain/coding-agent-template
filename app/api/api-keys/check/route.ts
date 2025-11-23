@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { getUserApiKey } from '@/lib/api-keys/user-keys'
+import { type NextRequest, NextResponse } from 'next/server'
 
 type Provider = 'openai' | 'gemini' | 'cursor' | 'anthropic' | 'aigateway'
 
@@ -79,7 +79,10 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if API key is available (either user's or system)
-    const apiKey = await getUserApiKey(provider!)
+    if (!provider) {
+      return NextResponse.json({ error: 'Unable to determine provider for agent' }, { status: 400 })
+    }
+    const apiKey = await getUserApiKey(provider)
     const hasKey = !!apiKey
 
     return NextResponse.json({

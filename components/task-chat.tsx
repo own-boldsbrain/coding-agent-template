@@ -1,29 +1,29 @@
 'use client'
 
-import { TaskMessage, Task } from '@/lib/db/schema'
-import { useState, useEffect, useRef, useCallback, Children, isValidElement } from 'react'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
+import { taskChatInputAtomFamily } from '@/lib/atoms/task'
+import type { Task, TaskMessage } from '@/lib/db/schema'
+import { useAtom } from 'jotai'
 import {
+  AlertCircle,
   ArrowUp,
-  Loader2,
-  Copy,
   Check,
+  CheckCircle,
+  Copy,
+  Loader2,
+  MessageSquare,
+  MoreVertical,
+  RefreshCw,
   RotateCcw,
   Square,
-  CheckCircle,
-  AlertCircle,
   XCircle,
-  RefreshCw,
-  MoreVertical,
-  MessageSquare,
 } from 'lucide-react'
+import { Children, isValidElement, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Streamdown } from 'streamdown'
-import { useAtom } from 'jotai'
-import { taskChatInputAtomFamily } from '@/lib/atoms/task'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 interface TaskChatProps {
   taskId: string
@@ -675,9 +675,11 @@ export function TaskChat({ taskId, task }: TaskChatProps) {
         if (status === 'completed') {
           if (conclusion === 'success') {
             return <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-          } else if (conclusion === 'failure') {
+          }
+          if (conclusion === 'failure') {
             return <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-          } else if (conclusion === 'cancelled') {
+          }
+          if (conclusion === 'cancelled') {
             return <XCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           }
         } else if (status === 'in_progress') {
@@ -1026,11 +1028,7 @@ export function TaskChat({ taskId, task }: TaskChatProps) {
 
                                 // Only add the shimmer marker if there's no content after it
                                 if (!contentAfter) {
-                                  processedContent =
-                                    content.substring(0, lastIndex) +
-                                    '🔄SHIMMER🔄' +
-                                    lastToolCall +
-                                    content.substring(endOfToolCall)
+                                  processedContent = `${content.substring(0, lastIndex)}🔄SHIMMER🔄${lastToolCall}${content.substring(endOfToolCall)}`
                                 }
                               }
                             }

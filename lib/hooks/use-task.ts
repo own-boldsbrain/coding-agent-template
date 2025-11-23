@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { Task } from '@/lib/db/schema'
+import type { Task } from '@/lib/db/schema'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export function useTask(taskId: string) {
   const [task, setTask] = useState<Task | null>(null)

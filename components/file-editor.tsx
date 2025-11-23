@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { toast } from 'sonner'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import { useTheme } from 'next-themes'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 // Monaco types for editor and monaco instances
 type MonacoEditor = Parameters<OnMount>[0]
@@ -561,7 +561,7 @@ export function FileEditor({
 
     // Override Go to Definition command to handle cross-file navigation
     console.log('[Editor Mount] Registering Go to Definition action...')
-    const actionDisposable = editor.addAction({
+    const _actionDisposable = editor.addAction({
       id: 'editor.action.revealDefinition.custom',
       label: 'Go to Definition',
       keybindings: [monaco.KeyCode.F12],

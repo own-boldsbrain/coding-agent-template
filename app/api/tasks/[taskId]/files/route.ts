@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
 import { getOctokit } from '@/lib/github/client'
-import { getServerSession } from '@/lib/session/get-server-session'
 import { PROJECT_DIR } from '@/lib/sandbox/commands'
+import { getServerSession } from '@/lib/session/get-server-session'
+import { and, eq, isNull } from 'drizzle-orm'
+import { type NextRequest, NextResponse } from 'next/server'
 
 interface FileChange {
   filename: string
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           .filter((line) => line.trim())
 
         // First, check if remote branch exists to determine comparison base
-        const lsRemoteResult = await sandbox.runCommand({
+        const _lsRemoteResult = await sandbox.runCommand({
           cmd: 'git',
           args: ['ls-remote', '--heads', 'origin', task.branchName],
           cwd: PROJECT_DIR,
@@ -200,8 +200,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           for (const line of numstatLines) {
             const parts = line.split('\t')
             if (parts.length >= 3) {
-              const additions = parseInt(parts[0]) || 0
-              const deletions = parseInt(parts[1]) || 0
+              const additions = Number.parseInt(parts[0]) || 0
+              const deletions = Number.parseInt(parts[1]) || 0
               const filename = parts[2]
               diffStats[filename] = { additions, deletions }
             }
@@ -257,7 +257,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
               })
               if (wcResult.exitCode === 0) {
                 const wcOutput = await wcResult.stdout()
-                const lineCount = parseInt(wcOutput.trim().split(/\s+/)[0]) || 0
+                const lineCount = Number.parseInt(wcOutput.trim().split(/\s+/)[0]) || 0
                 stats = { additions: lineCount, deletions: 0 }
               }
             } catch (err) {
@@ -589,9 +589,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
               branchName: task.branchName,
               message: 'Branch is being created...',
             })
-          } else {
-            throw branchError
           }
+          throw branchError
         }
 
         // Try to get the comparison between the branch and main
@@ -628,9 +627,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
                   branchName: task.branchName,
                   message: 'No base branch found for comparison',
                 })
-              } else {
-                throw masterError
               }
+              throw masterError
             }
           } else {
             throw mainError

@@ -1,36 +1,5 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import {
-  File,
-  Folder,
-  FolderOpen,
-  Clock,
-  GitBranch,
-  Loader2,
-  GitCommit,
-  ExternalLink,
-  Scissors,
-  Copy,
-  Clipboard,
-  Lock,
-  RotateCcw,
-  FilePlus,
-  FolderPlus,
-  Trash2,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { useAtom } from 'jotai'
-import { getTaskFileBrowserState } from '@/lib/atoms/file-browser'
-import { useMemo } from 'react'
-import { toast } from 'sonner'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuShortcut,
-} from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -49,8 +19,38 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getTaskFileBrowserState } from '@/lib/atoms/file-browser'
+import { useAtom } from 'jotai'
+import {
+  Clipboard,
+  Clock,
+  Copy,
+  ExternalLink,
+  File,
+  FilePlus,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  GitBranch,
+  GitCommit,
+  Loader2,
+  Lock,
+  RotateCcw,
+  Scissors,
+  Trash2,
+} from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { useMemo } from 'react'
+import { toast } from 'sonner'
 
 interface FileChange {
   filename: string
@@ -198,7 +198,8 @@ export function FileBrowser({
       if (node.type === 'file' && node.filename) {
         // Found the first file
         return node.filename
-      } else if (node.type === 'directory' && node.children) {
+      }
+      if (node.type === 'directory' && node.children) {
         // Recursively search in this directory
         const firstFileInDir = findFirstFile(node.children, fullPath)
         if (firstFileInDir) {
@@ -280,7 +281,7 @@ export function FileBrowser({
           loading: false,
         })
       }
-    } catch (err) {
+    } catch (_err) {
       setState({
         [viewMode]: {
           files: [],
@@ -473,7 +474,7 @@ export function FileBrowser({
     try {
       // If a folder is selected, prepend its path to the filename
       const isSelectedItemFolder =
-        selectedFile && files.some((f: FileChange) => f.filename.startsWith(selectedFile + '/'))
+        selectedFile && files.some((f: FileChange) => f.filename.startsWith(`${selectedFile}/`))
       const filename =
         isSelectedItemFolder && !newFileName.includes('/')
           ? `${selectedFile}/${newFileName.trim()}`
@@ -551,7 +552,7 @@ export function FileBrowser({
     try {
       // If a folder is selected, prepend its path to the foldername
       const isSelectedItemFolder =
-        selectedFile && files.some((f: FileChange) => f.filename.startsWith(selectedFile + '/'))
+        selectedFile && files.some((f: FileChange) => f.filename.startsWith(`${selectedFile}/`))
       const foldername =
         isSelectedItemFolder && !newFolderName.includes('/')
           ? `${selectedFile}/${newFolderName.trim()}`
@@ -721,7 +722,7 @@ export function FileBrowser({
 
   // Context menu handlers
   const handleOpenOnGitHub = useCallback(
-    (path: string, isFolder: boolean = false) => {
+    (path: string, isFolder = false) => {
       if (!repoUrl || !branchName) {
         toast.error('Repository URL or branch name not available')
         return
@@ -913,7 +914,7 @@ export function FileBrowser({
       }
 
       // Don't allow dropping on itself or its children
-      if (draggedItem.path === folderPath || folderPath.startsWith(draggedItem.path + '/')) {
+      if (draggedItem.path === folderPath || folderPath.startsWith(`${draggedItem.path}/`)) {
         return
       }
 
@@ -940,7 +941,7 @@ export function FileBrowser({
       }
 
       // Don't allow dropping on itself or its children
-      if (draggedItem.path === targetFolderPath || targetFolderPath.startsWith(draggedItem.path + '/')) {
+      if (draggedItem.path === targetFolderPath || targetFolderPath.startsWith(`${draggedItem.path}/`)) {
         toast.error('Cannot move a folder into itself')
         setDraggedItem(null)
         setDropTarget(null)
@@ -1173,141 +1174,137 @@ export function FileBrowser({
             )}
           </div>
         )
-      } else {
-        // File node
-        const isSelected = selectedFile === node.filename
-        const isSandboxMode = viewMode === 'local' || viewMode === 'all-local'
-        const isRemoteMode = viewMode === 'remote' || viewMode === 'all'
-        const isContextMenuOpen = contextMenuFile === node.filename
-        const isCut = clipboardFile?.filename === node.filename && clipboardFile?.operation === 'cut'
-        const isDragging = draggedItem?.path === node.filename
-        const isDragEnabled = viewMode === 'all-local' // Only allow drag in Files > Sandbox
-
-        const fileElement = (
-          <div
-            draggable={isDragEnabled}
-            onDragStart={(e) => handleDragStart(e, node.filename!, 'file')}
-            onDragEnd={handleDragEnd}
-            className={`flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-sm ${
-              isSelected ? 'bg-card' : 'hover:bg-card/50'
-            } ${isCut || isDragging ? 'opacity-50' : ''} ${isDragging ? 'cursor-move' : 'cursor-pointer'}`}
-            onClick={() => {
-              if (!isDraggingActive) {
-                onFileSelect?.(node.filename!, false)
-              }
-            }}
-            onContextMenu={(e) => handleContextMenu(e, node.filename!)}
-          >
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <File className="w-3.5 h-3.5 md:w-4 md:h-4 text-muted-foreground flex-shrink-0" />
-            </div>
-            <span
-              className={`text-xs md:text-sm flex-1 truncate ${
-                viewMode === 'all-local' && node.status === 'added'
-                  ? 'text-green-600'
-                  : viewMode === 'all-local' && node.status === 'modified'
-                    ? 'text-yellow-600'
-                    : ''
-              }`}
-            >
-              {name}
-            </span>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              {(viewMode === 'local' || viewMode === 'remote') &&
-                ((node.additions || 0) > 0 || (node.deletions || 0) > 0) && (
-                  <div className="flex items-center gap-1 text-xs">
-                    {(node.additions || 0) > 0 && <span className="text-green-600">+{node.additions}</span>}
-                    {(node.deletions || 0) > 0 && <span className="text-red-600">-{node.deletions}</span>}
-                  </div>
-                )}
-              {viewMode === 'all' && <Lock className="w-2.5 h-2.5 md:w-3 md:h-3 text-muted-foreground flex-shrink-0" />}
-            </div>
-          </div>
-        )
-
-        return (
-          <div key={fullPath} style={{ position: 'relative' }}>
-            {fileElement}
-            {isContextMenuOpen && contextMenuPosition && (
-              <DropdownMenu
-                open={isContextMenuOpen}
-                onOpenChange={(open) => {
-                  if (!open) {
-                    setContextMenuFile(null)
-                    setContextMenuPosition(null)
-                  }
-                }}
-              >
-                <DropdownMenuTrigger asChild>
-                  <div
-                    style={{
-                      position: 'fixed',
-                      top: contextMenuPosition.y,
-                      left: contextMenuPosition.x,
-                      width: '1px',
-                      height: '1px',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="bottom">
-                  {isRemoteMode && (
-                    <DropdownMenuItem onClick={() => handleOpenOnGitHub(node.filename!)}>
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Open on GitHub
-                    </DropdownMenuItem>
-                  )}
-                  {isSandboxMode && (
-                    <>
-                      {viewMode === 'local' ? (
-                        // Changes > Sandbox: Only show Discard Changes
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setFileToDiscard(node.filename!)
-                            setShowDiscardConfirm(true)
-                          }}
-                        >
-                          <RotateCcw className="w-4 h-4 mr-2" />
-                          Discard Changes
-                        </DropdownMenuItem>
-                      ) : (
-                        // Files > Sandbox: Show all file operations
-                        <>
-                          <DropdownMenuItem onClick={() => handleCut(node.filename!)}>
-                            <Scissors className="w-4 h-4 mr-2" />
-                            Cut
-                            <DropdownMenuShortcut>{isMac ? '⌘X' : 'Ctrl+X'}</DropdownMenuShortcut>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleCopy(node.filename!)}>
-                            <Copy className="w-4 h-4 mr-2" />
-                            Copy
-                            <DropdownMenuShortcut>{isMac ? '⌘C' : 'Ctrl+C'}</DropdownMenuShortcut>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handlePaste()} disabled={!clipboardFile}>
-                            <Clipboard className="w-4 h-4 mr-2" />
-                            Paste
-                            <DropdownMenuShortcut>{isMac ? '⌘V' : 'Ctrl+V'}</DropdownMenuShortcut>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setFileToDelete(node.filename!)
-                              setShowDeleteConfirm(true)
-                            }}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        )
       }
+      // File node
+      const isSelected = selectedFile === node.filename
+      const isSandboxMode = viewMode === 'local' || viewMode === 'all-local'
+      const isRemoteMode = viewMode === 'remote' || viewMode === 'all'
+      const isContextMenuOpen = contextMenuFile === node.filename
+      const isCut = clipboardFile?.filename === node.filename && clipboardFile?.operation === 'cut'
+      const isDragging = draggedItem?.path === node.filename
+      const isDragEnabled = viewMode === 'all-local' // Only allow drag in Files > Sandbox
+
+      const fileElement = (
+        <div
+          draggable={isDragEnabled}
+          onDragStart={(e) => handleDragStart(e, node.filename!, 'file')}
+          onDragEnd={handleDragEnd}
+          className={`flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-sm ${
+            isSelected ? 'bg-card' : 'hover:bg-card/50'
+          } ${isCut || isDragging ? 'opacity-50' : ''} ${isDragging ? 'cursor-move' : 'cursor-pointer'}`}
+          onClick={() => {
+            if (!isDraggingActive) {
+              onFileSelect?.(node.filename!, false)
+            }
+          }}
+          onContextMenu={(e) => handleContextMenu(e, node.filename!)}
+        >
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <File className="w-3.5 h-3.5 md:w-4 md:h-4 text-muted-foreground flex-shrink-0" />
+          </div>
+          <span
+            className={`text-xs md:text-sm flex-1 truncate ${
+              viewMode === 'all-local' && node.status === 'added'
+                ? 'text-green-600'
+                : viewMode === 'all-local' && node.status === 'modified'
+                  ? 'text-yellow-600'
+                  : ''
+            }`}
+          >
+            {name}
+          </span>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {(viewMode === 'local' || viewMode === 'remote') &&
+              ((node.additions || 0) > 0 || (node.deletions || 0) > 0) && (
+                <div className="flex items-center gap-1 text-xs">
+                  {(node.additions || 0) > 0 && <span className="text-green-600">+{node.additions}</span>}
+                  {(node.deletions || 0) > 0 && <span className="text-red-600">-{node.deletions}</span>}
+                </div>
+              )}
+            {viewMode === 'all' && <Lock className="w-2.5 h-2.5 md:w-3 md:h-3 text-muted-foreground flex-shrink-0" />}
+          </div>
+        </div>
+      )
+
+      return (
+        <div key={fullPath} style={{ position: 'relative' }}>
+          {fileElement}
+          {isContextMenuOpen && contextMenuPosition && (
+            <DropdownMenu
+              open={isContextMenuOpen}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setContextMenuFile(null)
+                  setContextMenuPosition(null)
+                }
+              }}
+            >
+              <DropdownMenuTrigger asChild>
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: contextMenuPosition.y,
+                    left: contextMenuPosition.x,
+                    width: '1px',
+                    height: '1px',
+                    pointerEvents: 'none',
+                  }}
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="bottom">
+                {isRemoteMode && (
+                  <DropdownMenuItem onClick={() => handleOpenOnGitHub(node.filename!)}>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open on GitHub
+                  </DropdownMenuItem>
+                )}
+                {isSandboxMode &&
+                  (viewMode === 'local' ? (
+                    // Changes > Sandbox: Only show Discard Changes
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setFileToDiscard(node.filename!)
+                        setShowDiscardConfirm(true)
+                      }}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Discard Changes
+                    </DropdownMenuItem>
+                  ) : (
+                    // Files > Sandbox: Show all file operations
+                    <>
+                      <DropdownMenuItem onClick={() => handleCut(node.filename!)}>
+                        <Scissors className="w-4 h-4 mr-2" />
+                        Cut
+                        <DropdownMenuShortcut>{isMac ? '⌘X' : 'Ctrl+X'}</DropdownMenuShortcut>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleCopy(node.filename!)}>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy
+                        <DropdownMenuShortcut>{isMac ? '⌘C' : 'Ctrl+C'}</DropdownMenuShortcut>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handlePaste()} disabled={!clipboardFile}>
+                        <Clipboard className="w-4 h-4 mr-2" />
+                        Paste
+                        <DropdownMenuShortcut>{isMac ? '⌘V' : 'Ctrl+V'}</DropdownMenuShortcut>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setFileToDelete(node.filename!)
+                          setShowDeleteConfirm(true)
+                        }}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      )
     })
   }
 
@@ -1696,7 +1693,7 @@ export function FileBrowser({
           <DialogHeader>
             <DialogTitle>Create New File</DialogTitle>
             <DialogDescription>
-              {selectedFile && files.some((f: FileChange) => f.filename.startsWith(selectedFile + '/'))
+              {selectedFile && files.some((f: FileChange) => f.filename.startsWith(`${selectedFile}/`))
                 ? `Creating file in: ${selectedFile}/`
                 : 'Enter the name for the new file (e.g., src/utils/helper.ts).'}
             </DialogDescription>
@@ -1708,7 +1705,7 @@ export function FileBrowser({
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
               placeholder={
-                selectedFile && files.some((f: FileChange) => f.filename.startsWith(selectedFile + '/'))
+                selectedFile && files.some((f: FileChange) => f.filename.startsWith(`${selectedFile}/`))
                   ? 'filename.ts'
                   : 'path/to/file.ts'
               }
@@ -1752,7 +1749,7 @@ export function FileBrowser({
           <DialogHeader>
             <DialogTitle>Create New Folder</DialogTitle>
             <DialogDescription>
-              {selectedFile && files.some((f: FileChange) => f.filename.startsWith(selectedFile + '/'))
+              {selectedFile && files.some((f: FileChange) => f.filename.startsWith(`${selectedFile}/`))
                 ? `Creating folder in: ${selectedFile}/`
                 : 'Enter the name for the new folder (e.g., src/components).'}
             </DialogDescription>
@@ -1764,7 +1761,7 @@ export function FileBrowser({
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder={
-                selectedFile && files.some((f: FileChange) => f.filename.startsWith(selectedFile + '/'))
+                selectedFile && files.some((f: FileChange) => f.filename.startsWith(`${selectedFile}/`))
                   ? 'foldername'
                   : 'path/to/folder'
               }

@@ -1,23 +1,23 @@
-import { NextRequest, NextResponse, after } from 'next/server'
-import { getServerSession } from '@/lib/session/get-server-session'
-import { db } from '@/lib/db/client'
-import { tasks, taskMessages, connectors } from '@/lib/db/schema'
-import { eq, and, asc, isNull } from 'drizzle-orm'
-import { generateId } from '@/lib/utils/id'
-import { createTaskLogger } from '@/lib/utils/task-logger'
-import { Sandbox } from '@/lib/sandbox'
-import { createSandbox } from '@/lib/sandbox/creation'
-import { executeAgentInSandbox, AgentType } from '@/lib/sandbox/agents'
-import { pushChangesToBranch, shutdownSandbox } from '@/lib/sandbox/git'
-import { unregisterSandbox } from '@/lib/sandbox/sandbox-registry'
-import { decrypt } from '@/lib/crypto'
-import { getUserGitHubToken } from '@/lib/github/user-token'
-import { getGitHubUser } from '@/lib/github/client'
 import { getUserApiKeys } from '@/lib/api-keys/user-keys'
-import { checkRateLimit } from '@/lib/utils/rate-limit'
+import { decrypt } from '@/lib/crypto'
+import { db } from '@/lib/db/client'
+import { connectors, taskMessages, tasks } from '@/lib/db/schema'
 import { getMaxSandboxDuration } from '@/lib/db/settings'
-import { generateCommitMessage, createFallbackCommitMessage } from '@/lib/utils/commit-message-generator'
+import { getGitHubUser } from '@/lib/github/client'
+import { getUserGitHubToken } from '@/lib/github/user-token'
+import { Sandbox } from '@/lib/sandbox'
+import { type AgentType, executeAgentInSandbox } from '@/lib/sandbox/agents'
+import { createSandbox } from '@/lib/sandbox/creation'
+import { pushChangesToBranch, shutdownSandbox } from '@/lib/sandbox/git'
 import { detectPortFromRepo } from '@/lib/sandbox/port-detection'
+import { unregisterSandbox } from '@/lib/sandbox/sandbox-registry'
+import { getServerSession } from '@/lib/session/get-server-session'
+import { createFallbackCommitMessage, generateCommitMessage } from '@/lib/utils/commit-message-generator'
+import { generateId } from '@/lib/utils/id'
+import { checkRateLimit } from '@/lib/utils/rate-limit'
+import { createTaskLogger } from '@/lib/utils/task-logger'
+import { and, asc, eq, isNull } from 'drizzle-orm'
+import { type NextRequest, NextResponse, after } from 'next/server'
 
 export async function POST(req: NextRequest, context: { params: Promise<{ taskId: string }> }) {
   try {
@@ -121,9 +121,9 @@ async function continueTask(
   repoUrl: string,
   branchName: string,
   maxDuration: number,
-  selectedAgent: string = 'claude',
+  selectedAgent = 'claude',
   selectedModel?: string,
-  installDependencies: boolean = false,
+  installDependencies = false,
   apiKeys?: {
     OPENAI_API_KEY?: string
     GEMINI_API_KEY?: string
@@ -268,7 +268,7 @@ async function continueTask(
       for (const msg of contextMessages) {
         const role = msg.role === 'user' ? 'User' : 'A'
         // Escape special characters and limit length to avoid shell parsing issues
-        const truncatedContent = msg.content.length > 500 ? msg.content.substring(0, 500) + '...' : msg.content
+        const truncatedContent = msg.content.length > 500 ? `${msg.content.substring(0, 500)}...` : msg.content
         // Remove problematic characters that could cause shell parsing issues
         const sanitizedContent = truncatedContent
           .replaceAll('`', "'") // Replace backticks with single quotes
@@ -417,11 +417,10 @@ async function continueTask(
         await logger.updateStatus('error')
         await logger.error('Task failed: Unable to push changes to repository')
         throw new Error('Failed to push changes to repository')
-      } else {
-        await logger.updateStatus('completed')
-        await logger.updateProgress(100, 'Task completed successfully')
-        console.log('Task continuation completed successfully')
       }
+      await logger.updateStatus('completed')
+      await logger.updateProgress(100, 'Task completed successfully')
+      console.log('Task continuation completed successfully')
     } else {
       await logger.error('Agent execution failed')
       throw new Error(agentResult.error || 'Agent execution failed')

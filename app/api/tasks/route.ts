@@ -1,27 +1,25 @@
-import { NextRequest, NextResponse, after } from 'next/server'
-import { Sandbox } from '@/lib/sandbox'
-import { db } from '@/lib/db/client'
-import { tasks, insertTaskSchema, connectors, taskMessages } from '@/lib/db/schema'
-import { generateId } from '@/lib/utils/id'
-import { createSandbox } from '@/lib/sandbox/creation'
-import { executeAgentInSandbox, AgentType } from '@/lib/sandbox/agents'
-import { pushChangesToBranch, shutdownSandbox } from '@/lib/sandbox/git'
-import { unregisterSandbox } from '@/lib/sandbox/sandbox-registry'
-import { detectPackageManager } from '@/lib/sandbox/package-manager'
-import { runCommandInSandbox, runInProject, PROJECT_DIR } from '@/lib/sandbox/commands'
-import { detectPortFromRepo } from '@/lib/sandbox/port-detection'
-import { eq, desc, or, and, isNull } from 'drizzle-orm'
-import { createTaskLogger } from '@/lib/utils/task-logger'
-import { generateBranchName, createFallbackBranchName } from '@/lib/utils/branch-name-generator'
-import { generateTaskTitle, createFallbackTitle } from '@/lib/utils/title-generator'
-import { generateCommitMessage, createFallbackCommitMessage } from '@/lib/utils/commit-message-generator'
-import { decrypt } from '@/lib/crypto'
-import { getServerSession } from '@/lib/session/get-server-session'
-import { getUserGitHubToken } from '@/lib/github/user-token'
-import { getGitHubUser } from '@/lib/github/client'
 import { getUserApiKeys } from '@/lib/api-keys/user-keys'
-import { checkRateLimit } from '@/lib/utils/rate-limit'
+import { decrypt } from '@/lib/crypto'
+import { db } from '@/lib/db/client'
+import { connectors, insertTaskSchema, taskMessages, tasks } from '@/lib/db/schema'
 import { getMaxSandboxDuration } from '@/lib/db/settings'
+import { getGitHubUser } from '@/lib/github/client'
+import { getUserGitHubToken } from '@/lib/github/user-token'
+import type { Sandbox } from '@/lib/sandbox'
+import { type AgentType, executeAgentInSandbox } from '@/lib/sandbox/agents'
+import { createSandbox } from '@/lib/sandbox/creation'
+import { pushChangesToBranch, shutdownSandbox } from '@/lib/sandbox/git'
+import { detectPortFromRepo } from '@/lib/sandbox/port-detection'
+import { unregisterSandbox } from '@/lib/sandbox/sandbox-registry'
+import { getServerSession } from '@/lib/session/get-server-session'
+import { createFallbackBranchName, generateBranchName } from '@/lib/utils/branch-name-generator'
+import { createFallbackCommitMessage, generateCommitMessage } from '@/lib/utils/commit-message-generator'
+import { generateId } from '@/lib/utils/id'
+import { checkRateLimit } from '@/lib/utils/rate-limit'
+import { createTaskLogger } from '@/lib/utils/task-logger'
+import { createFallbackTitle, generateTaskTitle } from '@/lib/utils/title-generator'
+import { and, desc, eq, isNull, or } from 'drizzle-orm'
+import { type NextRequest, NextResponse, after } from 'next/server'
 
 export async function GET() {
   try {
@@ -253,10 +251,10 @@ async function processTaskWithTimeout(
   prompt: string,
   repoUrl: string,
   maxDuration: number,
-  selectedAgent: string = 'claude',
+  selectedAgent = 'claude',
   selectedModel?: string,
-  installDependencies: boolean = false,
-  keepAlive: boolean = false,
+  installDependencies = false,
+  keepAlive = false,
   apiKeys?: {
     OPENAI_API_KEY?: string
     GEMINI_API_KEY?: string
@@ -329,7 +327,7 @@ async function processTaskWithTimeout(
 }
 
 // Helper function to wait for AI-generated branch name
-async function waitForBranchName(taskId: string, maxWaitMs: number = 10000): Promise<string | null> {
+async function waitForBranchName(taskId: string, maxWaitMs = 10000): Promise<string | null> {
   const startTime = Date.now()
 
   while (Date.now() - startTime < maxWaitMs) {
@@ -365,10 +363,10 @@ async function processTask(
   prompt: string,
   repoUrl: string,
   maxDuration: number,
-  selectedAgent: string = 'claude',
+  selectedAgent = 'claude',
   selectedModel?: string,
-  installDependencies: boolean = false,
-  keepAlive: boolean = false,
+  installDependencies = false,
+  keepAlive = false,
   apiKeys?: {
     OPENAI_API_KEY?: string
     GEMINI_API_KEY?: string
@@ -385,7 +383,7 @@ async function processTask(
 ) {
   let sandbox: Sandbox | null = null
   const logger = createTaskLogger(taskId)
-  const taskStartTime = Date.now()
+  const _taskStartTime = Date.now()
 
   try {
     console.log('Starting task processing')
@@ -682,13 +680,12 @@ async function processTask(
         await logger.updateStatus('error')
         await logger.error('Task failed: Unable to push changes to repository')
         throw new Error('Failed to push changes to repository')
-      } else {
-        // Update task as completed
-        await logger.updateStatus('completed')
-        await logger.updateProgress(100, 'Task completed successfully')
-
-        console.log('Task completed successfully')
       }
+      // Update task as completed
+      await logger.updateStatus('completed')
+      await logger.updateProgress(100, 'Task completed successfully')
+
+      console.log('Task completed successfully')
     } else {
       // Agent failed, but we still want to capture its logs
       await logger.error('Agent execution failed')

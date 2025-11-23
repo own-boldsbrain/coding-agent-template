@@ -48,7 +48,7 @@ Return ONLY the title, nothing else.`
 
     // Validate the title length
     if (title.length > 60) {
-      return title.substring(0, 57) + '...'
+      return `${title.substring(0, 57)}...`
     }
 
     return title
@@ -66,5 +66,5 @@ export function createFallbackTitle(prompt: string): string {
   }
 
   // Otherwise, truncate and add ellipsis
-  return prompt.substring(0, 57) + '...'
+  return `${prompt.substring(0, 57)}...`
 }

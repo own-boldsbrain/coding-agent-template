@@ -1,7 +1,7 @@
 'use client'
 
+import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Check, Loader2, X } from 'lucide-react'
 
 interface CheckRun {
   id: number

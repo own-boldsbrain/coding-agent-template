@@ -28,10 +28,10 @@ export class CursorOutputParser {
           } else if (parsed.type === 'assistant' && parsed.message?.content) {
             const textContent = this.extractAssistantText(parsed)
             if (textContent) {
-              newContent += '\n\n' + textContent
+              newContent += `\n\n${textContent}`
             }
           }
-        } catch (e) {
+        } catch (_e) {
           // Ignore parse errors
         }
       }
@@ -52,9 +52,9 @@ export class CursorOutputParser {
         const path = parsed.tool_call?.readToolCall?.args?.path || 'file'
         statusMsg = `\n\nReading ${path}`
       } else if (toolName === 'runCommandToolCall') {
-        statusMsg = `\n\nRunning command`
+        statusMsg = '\n\nRunning command'
       } else if (toolName === 'listDirectoryToolCall') {
-        statusMsg = `\n\nListing directory`
+        statusMsg = '\n\nListing directory'
       } else if (toolName === 'shellToolCall') {
         const command = parsed.tool_call?.shellToolCall?.args?.command || 'command'
         statusMsg = `\n\nRunning: ${command}`

@@ -1,7 +1,7 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
 import { GitHubIcon } from '@/components/icons/github-icon'
+import { Button } from '@/components/ui/button'
 import { formatAbbreviatedNumber } from '@/lib/utils/format-number'
 
 const GITHUB_REPO_URL = 'https://github.com/vercel-labs/coding-agent-template'

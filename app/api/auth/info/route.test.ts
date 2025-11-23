@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { GET } from './route'
 import { NextRequest } from 'next/server'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { GET } from './route'
 
 // Mock dependencies
 vi.mock('@/lib/session/server', () => ({
@@ -11,8 +11,8 @@ vi.mock('@/lib/session/create-github', () => ({
   saveSession: vi.fn(),
 }))
 
-import { getSessionFromReq } from '@/lib/session/server'
 import { saveSession } from '@/lib/session/create-github'
+import { getSessionFromReq } from '@/lib/session/server'
 
 describe('GET /api/auth/info', () => {
   beforeEach(() => {

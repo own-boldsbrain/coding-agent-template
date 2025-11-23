@@ -1,13 +1,9 @@
 'use client'
 
-import { Task } from '@/lib/db/schema'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { AlertCircle, Plus, Trash2, GitBranch } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useTasks } from '@/components/app-layout'
 import { Claude, Codex, Copilot, Cursor, Gemini, OpenCode } from '@/components/logos'
+import { PRCheckStatus } from '@/components/pr-check-status'
+import { PRStatusIcon } from '@/components/pr-status-icon'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,14 +14,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { useState, useMemo } from 'react'
-import { toast } from 'sonner'
-import { useTasks } from '@/components/app-layout'
-import { useAtomValue } from 'jotai'
 import { sessionAtom } from '@/lib/atoms/session'
-import { PRStatusIcon } from '@/components/pr-status-icon'
-import { PRCheckStatus } from '@/components/pr-check-status'
+import type { Task } from '@/lib/db/schema'
+import { cn } from '@/lib/utils'
+import { useAtomValue } from 'jotai'
+import { AlertCircle, GitBranch, Plus, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 // Model mappings for human-friendly names
 const AGENT_MODELS = {
@@ -411,9 +411,8 @@ export function TaskSidebar({ tasks, onTaskSelect, width = 288 }: TaskSidebarPro
                                       const pathParts = url.pathname.split('/').filter(Boolean)
                                       if (pathParts.length >= 2) {
                                         return `${pathParts[0]}/${pathParts[1].replace(/\.git$/, '')}`
-                                      } else {
-                                        return 'Unknown repository'
                                       }
+                                      return 'Unknown repository'
                                     } catch {
                                       return 'Invalid repository URL'
                                     }
@@ -467,7 +466,7 @@ export function TaskSidebar({ tasks, onTaskSelect, width = 288 }: TaskSidebarPro
           ) : (
             repositories.map((repo) => {
               const repoPath = `/repos/${repo.owner}/${repo.name}`
-              const isActive = pathname === repoPath || pathname.startsWith(repoPath + '/')
+              const isActive = pathname === repoPath || pathname.startsWith(`${repoPath}/`)
 
               return (
                 <Link

@@ -1,5 +1,5 @@
-import { type NextRequest } from 'next/server'
 import { getSessionFromReq } from '@/lib/session/server'
+import type { NextRequest } from 'next/server'
 
 export async function POST(req: NextRequest) {
   const session = await getSessionFromReq(req)

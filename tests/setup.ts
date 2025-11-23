@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-const mockFetch = vi.fn((url) => {
+const mockFetch = vi.fn((_url) => {
   return Promise.resolve({
     json: () => Promise.resolve({}),
     ok: true,

@@ -1,13 +1,15 @@
-import { Sandbox } from './index'
+/** @format */
+
 import { Writable } from 'node:stream'
-import { validateEnvironmentVariables, createAuthenticatedRepoUrl } from './config'
-import { runCommandInSandbox, runInProject, PROJECT_DIR } from './commands'
 import { generateId } from '@/lib/utils/id'
-import { SandboxConfig, SandboxResult } from './types'
 import { redactSensitiveInfo } from '@/lib/utils/logging'
-import { TaskLogger } from '@/lib/utils/task-logger'
+import type { TaskLogger } from '@/lib/utils/task-logger'
+import { PROJECT_DIR, runCommandInSandbox, runInProject } from './commands'
+import { createAuthenticatedRepoUrl, validateEnvironmentVariables } from './config'
+import { Sandbox } from './index'
 import { detectPackageManager, installDependencies } from './package-manager'
 import { registerSandbox } from './sandbox-registry'
+import type { SandboxConfig, SandboxResult } from './types'
 
 // Helper function to run command and log it
 async function runAndLogCommand(sandbox: Sandbox, command: string, args: string[], logger: TaskLogger, cwd?: string) {
@@ -31,7 +33,7 @@ async function runAndLogCommand(sandbox: Sandbox, command: string, args: string[
     result = await runCommandInSandbox(sandbox, command, args)
   }
 
-  if (result && result.output && result.output.trim()) {
+  if (result?.output?.trim()) {
     const redactedOutput = redactSensitiveInfo(result.output.trim())
     await logger.info(redactedOutput)
   }
@@ -72,7 +74,7 @@ export async function createSandbox(config: SandboxConfig, logger: TaskLogger): 
 
     // Use the specified timeout (maxDuration) for sandbox lifetime
     // keepAlive only controls whether we shutdown after task completion
-    const timeoutMs = config.timeout ? parseInt(config.timeout.replace(/\D/g, '')) * 60 * 1000 : 60 * 60 * 1000 // Default 1 hour
+    const timeoutMs = config.timeout ? Number.parseInt(config.timeout.replace(/\D/g, '')) * 60 * 1000 : 60 * 60 * 1000 // Default 1 hour
 
     // Determine ports based on project type (will be detected after cloning)
     // Default to both 3000 (Next.js) and 5173 (Vite) for now
@@ -149,8 +151,8 @@ export async function createSandbox(config: SandboxConfig, logger: TaskLogger): 
 
       // Check if this is a timeout error
       if (errorMessage?.includes('timeout') || errorCode === 'ETIMEDOUT' || errorName === 'TimeoutError') {
-        await logger.error(`Sandbox creation timed out after 5 minutes`)
-        await logger.error(`This usually happens when the repository is large or has many dependencies`)
+        await logger.error('Sandbox creation timed out after 5 minutes')
+        await logger.error('This usually happens when the repository is large or has many dependencies')
         throw new Error('Sandbox creation timed out. Try with a smaller repository or fewer dependencies.')
       }
 
@@ -346,7 +348,7 @@ export async function createSandbox(config: SandboxConfig, logger: TaskLogger): 
             await logger.info('Dev script detected, starting development server...')
 
             const packageManager = await detectPackageManager(sandbox, logger)
-            let devCommand = packageManager === 'npm' ? 'npm' : packageManager
+            const devCommand = packageManager === 'npm' ? 'npm' : packageManager
             let devArgs = packageManager === 'npm' ? ['run', 'dev'] : ['dev']
 
             // Check if Vite project and configure to allow all hosts
@@ -368,7 +370,7 @@ export async function createSandbox(config: SandboxConfig, logger: TaskLogger): 
                 // Read and modify the config
                 const configRead = await runInProject(sandbox, 'cat', ['vite.config.js'])
                 if (configRead.success) {
-                  let config = configRead.output || ''
+                  const _config = configRead.output || ''
 
                   // Simple sed replacement to set host: true in server config
                   // This disables Vite's host checking
@@ -425,8 +427,13 @@ fi
                   .toString()
                   .split('\n')
                   .filter((line) => line.trim())
+                let emittedLog = false
                 for (const line of lines) {
-                  logger.info(`[SERVER] ${line}`).catch(() => {})
+                  console.log('[SERVER]', line)
+                  emittedLog = true
+                }
+                if (emittedLog) {
+                  logger.info('Development server log entry received').catch(() => {})
                 }
                 callback()
               },
@@ -438,8 +445,13 @@ fi
                   .toString()
                   .split('\n')
                   .filter((line) => line.trim())
+                let emittedLog = false
                 for (const line of lines) {
-                  logger.info(`[SERVER] ${line}`).catch(() => {})
+                  console.error('[SERVER]', line)
+                  emittedLog = true
+                }
+                if (emittedLog) {
+                  logger.info('Development server log entry received').catch(() => {})
                 }
                 callback()
               },
@@ -460,7 +472,7 @@ fi
             domain = sandbox.domain(devPort)
             await logger.info('Development server is running')
           }
-        } catch (parseError) {
+        } catch {
           // If package.json parsing fails, just continue without starting dev server
           await logger.info('Could not parse package.json, skipping auto-start of dev server')
         }
@@ -468,9 +480,7 @@ fi
     }
 
     // If domain wasn't set by dev server, get it now
-    if (!domain) {
-      domain = sandbox.domain(devPort)
-    }
+    domain ??= sandbox.domain(devPort)
 
     // Log sandbox readiness based on project type
     if (packageJsonCheck.success) {
@@ -508,24 +518,26 @@ fi
 
     // Verify we're in a Git repository
     const gitRepoCheck = await runInProject(sandbox, 'git', ['rev-parse', '--git-dir'])
-    if (!gitRepoCheck.success) {
+    if (gitRepoCheck.success) {
+      await logger.info('Git repository detected')
+    } else {
       await logger.info('Not in a Git repository, initializing...')
       const gitInit = await runInProject(sandbox, 'git', ['init'])
       if (!gitInit.success) {
         throw new Error('Failed to initialize Git repository')
       }
       await logger.info('Git repository initialized')
-    } else {
-      await logger.info('Git repository detected')
     }
 
     // Check if repository is empty (no commits)
     const hasCommits = await runInProject(sandbox, 'git', ['rev-parse', 'HEAD'])
-    if (!hasCommits.success) {
+    if (hasCommits.success) {
+      await logger.info('Existing commit history detected')
+    } else {
       await logger.info('Empty repository detected, creating initial main branch')
 
       // Extract repo name from repoUrl (e.g., https://github.com/owner/repo.git -> repo)
-      const repoNameMatch = config.repoUrl.match(/\/([^\/]+?)(\.git)?$/)
+      const repoNameMatch = /\/([^/]+?)(\.git)?$/.exec(config.repoUrl)
       const repoName = repoNameMatch ? repoNameMatch[1] : 'repository'
 
       // Create README.md with repo name
@@ -558,11 +570,11 @@ fi
 
       // Push to origin
       const gitPush = await runInProject(sandbox, 'git', ['push', '-u', 'origin', 'main'])
-      if (!gitPush.success) {
+      if (gitPush.success) {
+        await logger.info('Pushed main branch to origin')
+      } else {
         await logger.info('Failed to push main branch to origin')
         // Don't throw error here as local repo is still valid
-      } else {
-        await logger.info('Pushed main branch to origin')
       }
     }
 
@@ -617,7 +629,21 @@ fi
             `${config.preDeterminedBranchName}:${config.preDeterminedBranchName}`,
           ])
 
-          if (!fetchBranch.success) {
+          if (fetchBranch.success) {
+            // Successfully fetched, now checkout
+            const checkoutRemoteBranch = await runAndLogCommand(
+              sandbox,
+              'git',
+              ['checkout', config.preDeterminedBranchName],
+              logger,
+              PROJECT_DIR,
+            )
+
+            if (!checkoutRemoteBranch.success) {
+              await logger.info('Failed to checkout remote branch')
+              throw new Error('Failed to checkout remote Git branch')
+            }
+          } else {
             await logger.info('Failed to fetch remote branch, trying alternative method')
 
             // Alternative: fetch all and then checkout
@@ -640,20 +666,6 @@ fi
               await logger.info('Failed to checkout and track remote branch')
               throw new Error('Failed to checkout remote Git branch')
             }
-          } else {
-            // Successfully fetched, now checkout
-            const checkoutRemoteBranch = await runAndLogCommand(
-              sandbox,
-              'git',
-              ['checkout', config.preDeterminedBranchName],
-              logger,
-              PROJECT_DIR,
-            )
-
-            if (!checkoutRemoteBranch.success) {
-              await logger.info('Failed to checkout remote branch')
-              throw new Error('Failed to checkout remote Git branch')
-            }
           }
 
           branchName = config.preDeterminedBranchName
@@ -671,9 +683,11 @@ fi
           if (!createBranch.success) {
             await logger.info('Failed to create branch')
             // Add debugging information
-            const gitStatus = await runInProject(sandbox, 'git', ['status'])
+            const gitStatusResult = await runInProject(sandbox, 'git', ['status'])
+            console.log('Git status output:', gitStatusResult.output ?? '')
             await logger.info('Git status retrieved')
-            const gitBranch = await runInProject(sandbox, 'git', ['branch', '-a'])
+            const gitBranchResult = await runInProject(sandbox, 'git', ['branch', '-a'])
+            console.log('Git branch list:', gitBranchResult.output ?? '')
             await logger.info('Git branches retrieved')
             throw new Error('Failed to create Git branch')
           }
@@ -684,7 +698,7 @@ fi
       }
     } else {
       // Fallback: Create a timestamp-based branch name
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+      const timestamp = new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-').slice(0, -5)
       const suffix = generateId()
       branchName = `agent/${timestamp}-${suffix}`
 
@@ -694,11 +708,14 @@ fi
       if (!createBranch.success) {
         await logger.info('Failed to create branch')
         // Add debugging information for fallback branch creation too
-        const gitStatus = await runInProject(sandbox, 'git', ['status'])
+        const gitStatusResult = await runInProject(sandbox, 'git', ['status'])
+        console.log('Git status output:', gitStatusResult.output ?? '')
         await logger.info('Git status retrieved')
-        const gitBranch = await runInProject(sandbox, 'git', ['branch', '-a'])
+        const gitBranchResult = await runInProject(sandbox, 'git', ['branch', '-a'])
+        console.log('Git branch list:', gitBranchResult.output ?? '')
         await logger.info('Git branches retrieved')
-        const gitLog = await runInProject(sandbox, 'git', ['log', '--oneline', '-5'])
+        const gitLogResult = await runInProject(sandbox, 'git', ['log', '--oneline', '-5'])
+        console.log('Recent commit summary:', gitLogResult.output ?? '')
         await logger.info('Recent commits retrieved')
         throw new Error('Failed to create Git branch')
       }

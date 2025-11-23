@@ -1,15 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { getOctokit } from '@/lib/github/client'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function PATCH(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ owner: string; repo: string; pr_number: string }> },
 ) {
   try {
     const { owner, repo, pr_number } = await context.params
-    const prNumber = parseInt(pr_number, 10)
+    const prNumber = Number.parseInt(pr_number, 10)
 
-    if (isNaN(prNumber)) {
+    if (Number.isNaN(prNumber)) {
       return NextResponse.json({ error: 'Invalid pull request number' }, { status: 400 })
     }
 

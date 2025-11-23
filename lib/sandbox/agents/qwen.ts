@@ -1,17 +1,17 @@
-import { SandboxType as Sandbox } from '../index'
-import { AgentExecutionResult } from './index'
+import type { SandboxType as Sandbox } from '../index'
+import type { AgentExecutionResult } from './index'
 
 export async function executeQwenInSandbox(
   sandbox: Sandbox,
   instruction: string,
   logger: { info: (msg: string) => Promise<void>; error: (msg: string) => Promise<void> },
   selectedModel?: string,
-  mcpServers?: any,
+  _mcpServers?: any,
 ): Promise<AgentExecutionResult> {
   const ollamaHost = process.env.OLLAMA_HOST || 'http://host.docker.internal:11434'
   const model = selectedModel || 'qwen2.5-coder:32b'
 
-  await logger.info('Using Qwen model: ' + model)
+  await logger.info(`Using Qwen model: ${model}`)
 
   const pythonScript = `import requests
 import json

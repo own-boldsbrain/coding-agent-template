@@ -1,7 +1,7 @@
-import type { NextRequest } from 'next/server'
-import type { Session, SessionUserInfo } from '@/lib/session/types'
 import { saveSession } from '@/lib/session/create-github'
 import { getSessionFromReq } from '@/lib/session/server'
+import type { Session, SessionUserInfo } from '@/lib/session/types'
+import type { NextRequest } from 'next/server'
 
 export async function GET(req: NextRequest) {
   const existingSession = await getSessionFromReq(req)

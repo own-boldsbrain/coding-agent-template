@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/client'
 import { tasks } from '@/lib/db/schema'
-import { eq, and, isNull } from 'drizzle-orm'
 import { Sandbox } from '@/lib/sandbox'
 import { getServerSession } from '@/lib/session/get-server-session'
+import { and, eq, isNull } from 'drizzle-orm'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
   try {
@@ -72,29 +72,31 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
             status: 'running',
             message: 'Sandbox and dev server are running',
           })
-        } else if (response.status === 410 || response.status === 502) {
+        }
+        if (response.status === 410 || response.status === 502) {
           // 410 Gone or 502 Bad Gateway means the sandbox has stopped
           return NextResponse.json({
             status: 'stopped',
             message: 'Sandbox has stopped or expired',
           })
-        } else if (response.status >= 500) {
+        }
+        if (response.status >= 500) {
           return NextResponse.json({
             status: 'error',
             message: 'Dev server returned an error',
             statusCode: response.status,
           })
-        } else if (response.status === 404 || response.status === 503) {
+        }
+        if (response.status === 404 || response.status === 503) {
           return NextResponse.json({
             status: 'starting',
             message: 'Dev server is starting up',
           })
-        } else {
-          return NextResponse.json({
-            status: 'starting',
-            message: 'Dev server is initializing',
-          })
         }
+        return NextResponse.json({
+          status: 'starting',
+          message: 'Dev server is initializing',
+        })
       } catch (fetchError) {
         // Network error - could mean sandbox is down or dev server hasn't started
         // Check if it's a network error vs timeout

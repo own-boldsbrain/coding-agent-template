@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Task } from '@/lib/db/schema'
+import type { Task } from '@/lib/db/schema'
+import { useEffect, useState } from 'react'
 
 interface TaskDurationProps {
   task: Task

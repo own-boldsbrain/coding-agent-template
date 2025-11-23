@@ -33,8 +33,8 @@ export function getSidebarWidth(): number {
 
   const cookieValue = Cookies.get(SIDEBAR_WIDTH_COOKIE)
   if (cookieValue) {
-    const width = parseInt(cookieValue, 10)
-    if (!isNaN(width) && width >= 200 && width <= 600) {
+    const width = Number.parseInt(cookieValue, 10)
+    if (!Number.isNaN(width) && width >= 200 && width <= 600) {
       return width
     }
   }
@@ -68,8 +68,8 @@ export function getSidebarWidthFromCookie(cookieString?: string): number {
       {} as Record<string, string>,
     )
 
-  const width = parseInt(cookies[SIDEBAR_WIDTH_COOKIE] || '', 10)
-  if (!isNaN(width) && width >= 200 && width <= 600) {
+  const width = Number.parseInt(cookies[SIDEBAR_WIDTH_COOKIE] || '', 10)
+  if (!Number.isNaN(width) && width >= 200 && width <= 600) {
     return width
   }
 
@@ -129,8 +129,8 @@ export function getLogsPaneHeight(): number {
 
   const cookieValue = Cookies.get(LOGS_PANE_HEIGHT_COOKIE)
   if (cookieValue) {
-    const height = parseInt(cookieValue, 10)
-    if (!isNaN(height) && height >= 100 && height <= 600) {
+    const height = Number.parseInt(cookieValue, 10)
+    if (!Number.isNaN(height) && height >= 100 && height <= 600) {
       return height
     }
   }
@@ -203,8 +203,8 @@ export function getMaxDuration(): number {
 
   const cookieValue = Cookies.get(MAX_DURATION_COOKIE)
   if (cookieValue) {
-    const duration = parseInt(cookieValue, 10)
-    if (!isNaN(duration) && duration >= 1 && duration <= 30) {
+    const duration = Number.parseInt(cookieValue, 10)
+    if (!Number.isNaN(duration) && duration >= 1 && duration <= 30) {
       return duration
     }
   }

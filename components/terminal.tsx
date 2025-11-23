@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react'
 import { cn } from '@/lib/utils'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 interface TerminalProps {
   taskId: string
@@ -360,7 +360,6 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(function Terminal
           onKeyDown={handleKeyDown}
           className="flex-1 bg-transparent outline-none text-white text-base md:text-xs"
           placeholder="Type a command..."
-          autoFocus={!isMobile}
         />
       </div>
     </div>
